@@ -231,6 +231,7 @@ local function loadProgress(player, data)
 		data.Rerolls = tonumber(saved.Rerolls) or 0
 		data.UIScale = math.clamp(tonumber(saved.UIScale) or 1, 0.7, 1.3)
 		data.World2Unlocked = saved.World2Unlocked == true
+		data.DuoKicks = math.max(0, math.floor(tonumber(saved.DuoKicks) or 0))
 		data.Pets = unpackPets(saved.Pets)
 		-- les potions (les vieilles sauvegardes n'en ont pas : 0)
 		local potions = type(saved.Potions) == "table" and saved.Potions or {}
@@ -275,6 +276,7 @@ local function saveProgress(player, data)
 		Rerolls = data.Rerolls,
 		UIScale = data.UIScale,
 		World2Unlocked = data.World2Unlocked,
+		DuoKicks = data.DuoKicks,
 		Potions = data.Potions,
 		BoostTime = math.floor(data.BoostTime),
 		Codes = usedCodes, -- les codes déjà utilisés
@@ -311,6 +313,7 @@ Players.PlayerAdded:Connect(function(player)
 		Rerolls = 0, -- la monnaie 💎 du Trait Master
 		UIScale = 1, -- la taille de l'interface choisie dans Settings (0.7 à 1.3)
 		World2Unlocked = false, -- vrai quand un œuf a touché le portail du bout de la piste
+		DuoKicks = 0, -- nombre de coups de pied à deux réussis
 		UpgradeLevel = 0,
 		Best = 0,
 		Strength = 0, -- points de Force gagnés avec les haltères (on les garde)

@@ -33,10 +33,16 @@ local OpenCodes = makeRemote("OpenCodes")       -- serveur -> client : "ouvre la
 local RedeemCode = Instance.new("RemoteFunction") -- client -> serveur : "j'essaie ce code" (le serveur répond)
 RedeemCode.Name = "RedeemCode"
 RedeemCode.Parent = remotes
+local DuoInvite = makeRemote("DuoInvite")       -- client -> serveur : "j'invite ce joueur à tirer avec moi"
+local DuoRespond = makeRemote("DuoRespond")     -- client -> serveur : "j'accepte / je refuse l'invitation de ce joueur"
+local DuoLeave = makeRemote("DuoLeave")         -- client -> serveur : "je quitte le duo"
+local DuoInvited = makeRemote("DuoInvited")     -- serveur -> client : "ce joueur t'invite à tirer avec lui"
+local DuoUpdate = makeRemote("DuoUpdate")       -- serveur -> client : ton duo (partenaire, prêt ?) ou nil
 return {
 	LaunchEgg = LaunchEgg, BuyUpgrade = BuyUpgrade, EggLaunched = EggLaunched, EggLanded = EggLanded,
 	StateChanged = StateChanged, DumbbellCollected = DumbbellCollected, EquipPet = EquipPet, EquipBest = EquipBest,
 	RerollTrait = RerollTrait, TraitRerolled = TraitRerolled, OpenTraits = OpenTraits, SetUIScale = SetUIScale,
 	World2Unlocked = World2Unlocked, ShowMessage = ShowMessage, UsePotion = UsePotion, OpenCodes = OpenCodes,
-	RedeemCode = RedeemCode,
+	RedeemCode = RedeemCode, DuoInvite = DuoInvite, DuoRespond = DuoRespond, DuoLeave = DuoLeave,
+	DuoInvited = DuoInvited, DuoUpdate = DuoUpdate,
 }

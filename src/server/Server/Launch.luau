@@ -16,6 +16,7 @@ local DumbbellCollected, EquipPet, EquipBest, RerollTrait, TraitRerolled = Remot
 local OpenTraits, SetUIScale, World2Unlocked, ShowMessage = Remotes.OpenTraits, Remotes.SetUIScale, Remotes.World2Unlocked, Remotes.ShowMessage
 local UsePotion, OpenCodes, RedeemCode = Remotes.UsePotion, Remotes.OpenCodes, Remotes.RedeemCode
 local Data = require(script.Parent.PlayerData)
+local Duo = require(script.Parent.Duo)
 local playerData, sendState, petKey = Data.playerData, Data.sendState, Data.petKey
 local getBonuses, getMultiplier, getForce, getCoinsPerSecond = Data.getBonuses, Data.getMultiplier, Data.getForce, Data.getCoinsPerSecond
 local countOwned, countEquipped, equipBest = Data.countOwned, Data.countEquipped, Data.equipBest
@@ -310,51 +311,66 @@ local function playImpact(egg, color)
 	end)
 end
 
-LaunchEgg.OnServerEvent:Connect(function(player, power)
-	local data = playerData[player]
-	if not data or data.Busy then
-		return -- un seul œuf à la fois
+-- Un tir, seul ou à deux. kickers = { { Player = joueur, Power = jauge de 0 à 1 }, ... }
+-- À deux : les Forces s'additionnent, l'œuf part entre les deux joueurs, et chacun gagne son propre pet.
+local function runLaunch(kickers)
+	-- On ne fait jamais confiance au client : on vérifie chaque tireur.
+	local valid = {}
+	for _, kicker in kickers do
+		local data = playerData[kicker.Player]
+		local root = kicker.Player.Character and kicker.Player.Character:FindFirstChild("HumanoidRootPart")
+		-- On ne peut tirer que depuis la plateforme de tir (x de -40 à 0, z de -40 à 40)
+		local p = root and root.Position
+		if data and not data.Busy and p and p.X >= -43 and p.X <= 3 and math.abs(p.Z) <= 43 then
+			kicker.Data = data
+			kicker.Position = p
+			table.insert(valid, kicker)
+		end
 	end
-	-- On ne fait jamais confiance au client : on vérifie la valeur reçue.
-	if typeof(power) ~= "number" or power ~= power then
+	if #valid == 0 then
 		return
 	end
-	power = math.clamp(power, 0, 1)
-	-- On ne peut tirer que depuis la plateforme de tir (x de -40 à 0, z de -40 à 40)
-	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	if not root then
-		return
+	for _, kicker in valid do
+		kicker.Data.Busy = true -- un seul œuf à la fois
 	end
-	local p = root.Position
-	if p.X < -43 or p.X > 3 or math.abs(p.Z) > 43 then
-		return
-	end
-	data.Busy = true
+	local isDuo = #valid > 1
 
 	local launch = Config.Launch
-	-- La Force du tir = la Force du compteur x la jauge (au moins 30 %)
-	local kickForce = math.floor(getForce(data) * (launch.MinPower + (1 - launch.MinPower) * power))
+	-- La Force du tir = la Force du compteur x la jauge (au moins 30 %), + celle du partenaire en duo
+	local kickForce, launchBonus, center = 0, 0, Vector3.zero
+	for i, kicker in valid do
+		local force = math.floor(getForce(kicker.Data) * (launch.MinPower + (1 - launch.MinPower) * kicker.Power))
+		kickForce += i == 1 and force or math.floor(force * Config.DuoKick.PartnerShare)
+		launchBonus += getBonuses(kicker.Data).Launch
+		center += kicker.Position
+	end
+	launchBonus /= #valid
+	center /= #valid
 	-- la distance voulue (voir Config.Progression, + le trait "Distance" des pets),
 	-- puis la vitesse qu'il faut donner à l'œuf pour l'atteindre
-	local targetDistance = Config.DistanceForForce(kickForce) * getBonuses(data).Launch
-	targetDistance += math.max(0, -(p.X + 3.5)) -- l'œuf part de la plateforme, avant la ligne de départ (x = 0)
+	local targetDistance = Config.DistanceForForce(kickForce) * launchBonus
+	targetDistance += math.max(0, -(center.X + 3.5)) -- l'œuf part de la plateforme, avant la ligne de départ (x = 0)
 	local speed = math.sqrt(targetDistance * workspace.Gravity / math.sin(2 * math.rad(launch.Angle)))
 
 	local egg = Instance.new("Part")
-	egg.Name = "Oeuf_" .. player.Name
+	egg.Name = "Oeuf_" .. valid[1].Player.Name
 	egg.Shape = Enum.PartType.Ball
 	egg.Size = Vector3.new(EGG_RADIUS * 2, EGG_RADIUS * 2, EGG_RADIUS * 2)
 	egg.Color = Color3.fromRGB(255, 245, 220)
 	egg.Material = Enum.Material.SmoothPlastic
 	egg.CustomPhysicalProperties = PhysicalProperties.new(1, 2, 0) -- lourd, ne rebondit pas
 	egg.CollisionGroup = "Eggs" -- il passe à travers les barrières magiques
-	egg.Anchored = true -- il attend par terre, juste devant le joueur (côté zones)
-	egg.CFrame = CFrame.new(p.X + 3.5, PLATFORM_TOP + EGG_RADIUS, p.Z)
+	egg.Anchored = true -- il attend par terre, juste devant le joueur (entre les deux joueurs en duo)
+	egg.CFrame = CFrame.new(center.X + 3.5, PLATFORM_TOP + EGG_RADIUS, center.Z)
 	addEggEffects(egg)
 	attachEggModel(egg, "Commune") -- l'œuf part avec le look Prairie
+	if isDuo then
+		egg.Etincelles.Color = ColorSequence.new(Color3.fromRGB(255, 215, 60)) -- en duo, des étincelles dorées
+		egg.Etincelles.Rate = 20
+	end
 	egg.Parent = workspace
 
-	-- Le joueur tire dans l'œuf ; au moment de l'impact, l'œuf s'envole en tournant sur lui-même
+	-- Les joueurs tirent dans l'œuf ; au premier impact, l'œuf s'envole en tournant sur lui-même
 	local launched = false
 	local function kickEgg()
 		if launched then
@@ -366,21 +382,33 @@ LaunchEgg.OnServerEvent:Connect(function(player, power)
 		local angle = math.rad(launch.Angle)
 		egg.AssemblyLinearVelocity = Vector3.new(math.cos(angle), math.sin(angle), 0) * speed
 		egg.AssemblyAngularVelocity = Vector3.new(0, 0, -10) -- la rotation en l'air (il roule vers l'avant)
-		egg.Etincelles:Emit(25) -- le "tchac" du coup de pied
+		egg.Etincelles:Emit(isDuo and 60 or 25) -- le "tchac" du coup de pied
 
-		-- Le monde se charge autour de l'œuf (et plus autour du joueur) pendant le vol
-		player.ReplicationFocus = egg
-		EggLaunched:FireClient(player, egg, kickForce)
-	end
-	-- Si l'animation rate (avatar spécial...), l'œuf part quand même et le joueur est libéré
-	local ok, problem = pcall(playKick, player, kickEgg)
-	if not ok then
-		warn("Coup de pied : " .. tostring(problem))
-		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		if root then
-			root.Anchored = false
+		for i, kicker in valid do
+			-- Le monde se charge autour de l'œuf (et plus autour du joueur) pendant le vol
+			kicker.Player.ReplicationFocus = egg
+			local partner = isDuo and valid[3 - i].Player or nil
+			EggLaunched:FireClient(kicker.Player, egg, kickForce, partner and partner.DisplayName or nil)
 		end
 	end
+	for _, kicker in valid do
+		task.spawn(function()
+			-- Si l'animation rate (avatar spécial...), l'œuf part quand même et le joueur est libéré
+			local ok, problem = pcall(playKick, kicker.Player, kickEgg)
+			if not ok then
+				warn("Coup de pied : " .. tostring(problem))
+				local root = kicker.Player.Character and kicker.Player.Character:FindFirstChild("HumanoidRootPart")
+				if root then
+					root.Anchored = false
+				end
+			end
+			kickEgg()
+		end)
+	end
+	local start = os.clock()
+	repeat
+		task.wait()
+	until launched or os.clock() - start > 1
 	kickEgg()
 
 	local reachedPortal = waitForLanding(egg) == "portal"
@@ -400,10 +428,12 @@ LaunchEgg.OnServerEvent:Connect(function(player, power)
 		sound:Play()
 		task.delay(3, sound.Destroy, sound)
 	end
-	if player.Parent then
-		task.delay(2, function()
-			player.ReplicationFocus = nil
-		end)
+	for _, kicker in valid do
+		if kicker.Player.Parent then
+			task.delay(2, function()
+				kicker.Player.ReplicationFocus = nil
+			end)
+		end
 	end
 
 	local distance = math.max(0, math.floor(egg.Position.X - LAUNCH_POINT.X))
@@ -411,50 +441,109 @@ LaunchEgg.OnServerEvent:Connect(function(player, power)
 		distance = Config.Zones[#Config.Zones].Finish -- le bout de la piste
 	end
 	local zone = Config.GetZoneForDistance(distance)
-	-- aucune rareté garantie : plus l'œuf va loin, meilleures sont les chances (+ le Luck des traits)
-	local chances = Config.GetChances(distance, getBonuses(data).Luck)
-	local rarityId = Config.RollRarity(chances)
-	local petName = Config.RandomPet(rarityId)
+
+	-- Chaque tireur tire son propre pet : aucune rareté garantie,
+	-- plus l'œuf va loin, meilleures sont les chances (+ le Luck des traits de ses pets)
+	for i, kicker in valid do
+		local player = kicker.Player
+		local data = playerData[player]
+		if data then -- (le joueur est peut-être parti pendant le vol)
+			local chances = Config.GetChances(distance, getBonuses(data).Luck)
+			local rarityId = Config.RollRarity(chances)
+			local petName = Config.RandomPet(rarityId)
+			if i == 1 and not reachedPortal then
+				setEggLook(egg, rarityId) -- l'œuf montre la rareté du pet obtenu
+				playImpact(egg, Config.GetRarity(rarityId).Color)
+			end
+
+			local newPet = { Name = petName, Rarity = rarityId } -- pas de trait : le Trait Master du lobby en donne
+			table.insert(data.Pets, newPet)
+			if #data.Equipped < Config.Launch.MaxEquipped then
+				table.insert(data.Equipped, petKey(newPet)) -- il reste une place : le nouveau pet est équipé tout seul
+			end
+			data.Best = math.max(data.Best, distance)
+			data.Busy = false
+			if isDuo then
+				data.DuoKicks += 1
+			end
+			if reachedPortal and not data.World2Unlocked then
+				data.World2Unlocked = true -- sauvegardé pour toujours
+				World2Unlocked:FireClient(player)
+			end
+			-- parfois, on gagne aussi 1 Reroll 📜 (plus l'œuf va loin, plus c'est probable)
+			local gotReroll = math.random(1, 100) <= (Config.RerollDrops[zone.Rarity] or 0)
+			if gotReroll then
+				data.Rerolls += 1
+			end
+
+			EggLanded:FireClient(player, {
+				Distance = distance,
+				Zone = zone.Rarity,
+				Rarity = rarityId,
+				PetName = petName,
+				KickForce = kickForce,
+				GotReroll = gotReroll,
+				Chance = chances[rarityId], -- la chance (en %) qu'on avait d'avoir cette rareté
+				Duo = isDuo,
+			})
+			sendState(player)
+		end
+	end
 	if reachedPortal then
 		task.delay(0.6, egg.Destroy, egg)
 	else
-		setEggLook(egg, rarityId) -- l'œuf montre la rareté du pet obtenu
-		playImpact(egg, Config.GetRarity(rarityId).Color)
 		task.delay(3, egg.Destroy, egg)
 	end
+	for _, kicker in valid do
+		Duo.Refresh(kicker.Player) -- le partenaire n'est plus "prêt" : on recommence
+	end
+end
 
-	data = playerData[player]
-	if not data then
-		return -- le joueur est parti pendant le vol
-	end
+-- En duo, le premier qui relâche attend son partenaire (au plus Config.DuoKick.ReleaseWindow secondes)
+local waitingDuo = {} -- [joueur] = { Power = sa jauge }
 
-	local newPet = { Name = petName, Rarity = rarityId } -- pas de trait : le Trait Master du lobby en donne
-	table.insert(data.Pets, newPet)
-	if #data.Equipped < Config.Launch.MaxEquipped then
-		table.insert(data.Equipped, petKey(newPet)) -- il reste une place : le nouveau pet est équipé tout seul
+LaunchEgg.OnServerEvent:Connect(function(player, power)
+	local data = playerData[player]
+	if not data or data.Busy then
+		return -- un seul œuf à la fois
 	end
-	data.Best = math.max(data.Best, distance)
-	data.Busy = false
-	if reachedPortal and not data.World2Unlocked then
-		data.World2Unlocked = true -- sauvegardé pour toujours
-		World2Unlocked:FireClient(player)
+	-- On ne fait jamais confiance au client : on vérifie la valeur reçue.
+	if typeof(power) ~= "number" or power ~= power then
+		return
 	end
-	-- parfois, on gagne aussi 1 Reroll 📜 (plus l'œuf va loin, plus c'est probable)
-	local gotReroll = math.random(1, 100) <= (Config.RerollDrops[zone.Rarity] or 0)
-	if gotReroll then
-		data.Rerolls += 1
-	end
+	power = math.clamp(power, 0, 1)
 
-	EggLanded:FireClient(player, {
-		Distance = distance,
-		Zone = zone.Rarity,
-		Rarity = rarityId,
-		PetName = petName,
-		KickForce = kickForce,
-		GotReroll = gotReroll,
-		Chance = chances[rarityId], -- la chance (en %) qu'on avait d'avoir cette rareté
-	})
-	sendState(player)
+	local partner = Duo.PartnerOf(player)
+	if not partner then
+		runLaunch({ { Player = player, Power = power } })
+		return
+	end
+	local partnerWaiting = waitingDuo[partner]
+	if partnerWaiting then
+		-- les deux ont relâché : on tire ensemble !
+		waitingDuo[partner] = nil
+		runLaunch({ { Player = partner, Power = partnerWaiting.Power }, { Player = player, Power = power } })
+		return
+	end
+	if waitingDuo[player] then
+		return
+	end
+	local entry = { Power = power }
+	waitingDuo[player] = entry
+	Duo.SendPartnerReady(partner)
+	task.delay(Config.DuoKick.ReleaseWindow, function()
+		if waitingDuo[player] ~= entry then
+			return -- le partenaire a relâché à temps : le tir est déjà parti
+		end
+		waitingDuo[player] = nil
+		-- le partenaire n'a pas relâché : on tire quand même, lui avec la jauge au minimum
+		local stillPartner = Duo.PartnerOf(player)
+		if stillPartner then
+			runLaunch({ { Player = player, Power = power }, { Player = stillPartner, Power = 0 } })
+		else
+			runLaunch({ { Player = player, Power = power } })
+		end
+	end)
 end)
 
 return {}

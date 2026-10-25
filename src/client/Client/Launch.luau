@@ -172,6 +172,14 @@ local function launch()
 	end
 	ready = false
 	LaunchEgg:FireServer(power)
+	-- sécurité : si le serveur refuse le tir (ou si le partenaire du duo ne vient pas), on peut retirer
+	local myLaunch = os.clock()
+	UI.lastLaunchRequest = myLaunch
+	task.delay(Config.DuoKick.ReleaseWindow + 3, function()
+		if UI.lastLaunchRequest == myLaunch and not UI.trackedEgg and not ready then
+			ready = true
+		end
+	end)
 end
 
 local function isChargeInput(input)
@@ -294,12 +302,19 @@ local function arcadeBurst(text, color)
 	end)
 end
 
-EggLaunched.OnClientEvent:Connect(function(egg, kickForce)
+EggLaunched.OnClientEvent:Connect(function(egg, kickForce, duoPartnerName)
+	-- En duo, le partenaire a pu déclencher le tir : on arrête de charger
+	ready = false
+	UI.lastLaunchRequest = nil
+	if charging then
+		charging = false
+		stopChargeAnim()
+	end
 	-- On affiche la Force du tir, en gros, au moment du coup de pied
 	if kickForce then
-		-- arcade : un petit tremblement et un gros "POW!" au coup de pied
+		-- arcade : un petit tremblement et un gros "POW!" au coup de pied ("DUO KICK!" à deux)
 		shakeUntil = os.clock() + 0.25
-		arcadeBurst(ARCADE_WORDS[math.random(1, #ARCADE_WORDS)])
+		arcadeBurst(duoPartnerName and "DUO KICK!" or ARCADE_WORDS[math.random(1, #ARCADE_WORDS)])
 	end
 	if kickForce then
 		strengthLabel.Text = "💥 " .. formatNumber(kickForce)

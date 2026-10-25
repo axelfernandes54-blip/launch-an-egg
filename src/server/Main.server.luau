@@ -10,7 +10,8 @@ local Server = ServerScriptService:WaitForChild("Server")
 require(Server.Remotes)       -- les RemoteEvents
 require(Server.MapInfo)       -- les mesures et objets de la carte
 local Data = require(Server.PlayerData) -- les joueurs et leur sauvegarde
-require(Server.Launch)        -- le lancer d'œuf
+require(Server.Duo)           -- le coup de pied à deux (invitations, duos)
+require(Server.Launch)        -- le lancer d'œuf (seul ou à deux)
 require(Server.Pets)          -- équiper les pets
 require(Server.Traits)        -- le Trait Master
 require(Server.Shop)          -- les améliorations (pièces)

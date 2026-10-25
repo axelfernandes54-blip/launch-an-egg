@@ -4,13 +4,14 @@
 --   Windows      : Shop, Upgrades, Inventory (PETS / POTIONS), Codes, Trait Master, Collection, Leaderboard, Settings
 --   Hud          : tuiles, compteurs, barre des zones, Force, minuteur de potion
 --   Launch       : jauge, tir, caméra qui suit l'œuf, carte "YOU GOT..."
+--   Duo          : coup de pied à deux (bouton DUO, invitation, bandeau)
 --   Events       : messages du serveur et mise à jour de l'écran
 --   World        : lumière, mouettes, course, barrières, haltères
 --   PetFollowers : les pets qui suivent les joueurs
 -- (les animations du personnage sont dans ReplicatedStorage > CharacterAnimator)
 
 local Client = script.Parent:WaitForChild("Client")
-for _, name in { "UI", "Windows", "Hud", "Launch", "Events", "World", "PetFollowers" } do
+for _, name in { "UI", "Windows", "Hud", "Launch", "Duo", "Events", "World", "PetFollowers" } do
 	local ok, problem = pcall(require, Client:WaitForChild(name))
 	if not ok then
 		warn("Client > " .. name .. " : " .. tostring(problem))

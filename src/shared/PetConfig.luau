@@ -92,6 +92,16 @@ Config.Launch = {
 	MaxEquipped = 3,     -- nombre de pets qui donnent leur bonus de force (les 3 meilleurs)
 }
 
+-- Le coup de pied à deux : deux joueurs tirent dans le même œuf, leurs Forces s'additionnent.
+Config.DuoKick = {
+	InviteDistance = 8,  -- distance max (studs) pour inviter un joueur sur la plateforme
+	BreakDistance = 18,  -- si les deux joueurs s'éloignent plus que ça, le duo s'arrête
+	ReleaseWindow = 3,   -- secondes pour que le partenaire relâche après le premier (sinon il tire au minimum)
+	PartnerShare = 1,    -- part de la Force du partenaire ajoutée au tir (1 = 100 %)
+	InviteCooldown = 5,  -- secondes entre deux invitations d'un même joueur
+	InviteTimeout = 10,  -- secondes pour accepter une invitation
+}
+
 -- Les animations du tir (faites dans l'Animation Editor sur le rig "KickRig", puis publiées sur Roblox).
 -- Colle ici le numéro (ID) de chaque animation. Vide ("") = l'ancien coup de pied fait par script.
 Config.Animations = {
