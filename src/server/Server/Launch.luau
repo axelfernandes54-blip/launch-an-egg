@@ -470,6 +470,10 @@ local function runLaunch(kickers)
 				table.insert(data.Equipped, petKey(newPet)) -- il reste une place : le nouveau pet est équipé tout seul
 			end
 			data.Best = math.max(data.Best, distance)
+			data.Launches += 1 -- (classements EGGS LAUNCHED et LONGEST THROW de la semaine)
+			local weekly = Data.getWeekly(data)
+			weekly.Launches += 1
+			weekly.Best = math.max(weekly.Best, distance)
 			-- les pièces du lancer : plus l'œuf va loin, plus on en gagne (x le bonus de pièces des pets et de l'upgrade)
 			local coins = math.floor(distance * Config.LaunchCoinsPerStud * getBonuses(data).Coins)
 			data.Coins += coins

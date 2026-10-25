@@ -55,6 +55,15 @@ local function getCoinMultiplier(data)
 	return getBonuses(data).Coins
 end
 
+-- Les scores de la semaine (classements Weekly) : remis à zéro quand une nouvelle semaine commence
+local function getWeekly(data)
+	local week = Config.CurrentWeek()
+	if data.Weekly.Week ~= week then
+		data.Weekly = { Week = week, Best = 0, Strength = 0, Launches = 0, Robux = 0 }
+	end
+	return data.Weekly
+end
+
 -- Chaque pet a un trait : on le repère avec sa clé "Nom|Trait|Niveau" (voir PetConfig)
 local function petKey(pet)
 	return Config.MakeKey(pet.Name, pet.Trait, pet.Tier)
@@ -146,6 +155,9 @@ local function sendState(player)
 		PetCounts = petCounts,
 		NameCounts = nameCounts,
 		IndexClaimed = data.IndexClaimed, -- [rareté] = true : les lignes de l'Index déjà réclamées
+		Launches = data.Launches, -- (pour sa ligne dans les classements)
+		RobuxSpent = data.RobuxSpent,
+		Weekly = getWeekly(data),
 		Diamonds = data.Diamonds,
 		UIScale = data.UIScale,
 		Dimension = Config.DimensionForDistance(data.Best).Id, -- la dimension de son record (pour la barre du haut)
@@ -264,6 +276,13 @@ local function loadProgress(player, data)
 			end
 		end
 		data.DuoKicks = math.max(0, math.floor(tonumber(saved.DuoKicks) or 0))
+		data.Launches = math.max(0, math.floor(tonumber(saved.Launches) or 0))
+		data.RobuxSpent = math.max(0, math.floor(tonumber(saved.RobuxSpent) or 0))
+		if type(saved.Weekly) == "table" and tonumber(saved.Weekly.Week) == Config.CurrentWeek() then
+			for _, key in { "Best", "Strength", "Launches", "Robux" } do
+				data.Weekly[key] = math.max(0, math.floor(tonumber(saved.Weekly[key]) or 0))
+			end
+		end
 		if type(saved.IndexClaimed) == "table" then
 			for _, rarityId in saved.IndexClaimed do
 				if type(rarityId) == "string" then
@@ -325,6 +344,9 @@ local function saveProgress(player, data)
 		UnlockedWorlds = unlocked, -- les worlds achetés (liste d'Id)
 		DuoKicks = data.DuoKicks,
 		IndexClaimed = indexClaimed, -- les lignes de l'Index réclamées (liste de raretés)
+		Launches = data.Launches,
+		RobuxSpent = data.RobuxSpent,
+		Weekly = data.Weekly,
 		Potions = data.Potions,
 		BoostTime = math.floor(data.BoostTime),
 		Codes = usedCodes, -- les codes déjà utilisés
@@ -364,6 +386,9 @@ Players.PlayerAdded:Connect(function(player)
 		UnlockedWorlds = { [1] = true }, -- les worlds achetés avec des pièces au portail du lobby
 		DuoKicks = 0, -- nombre de coups de pied à deux réussis
 		IndexClaimed = {}, -- [rareté] = true : lignes de l'Index réclamées
+		Launches = 0, -- nombre d'œufs lancés (pour toujours)
+		RobuxSpent = 0, -- Robux dépensés dans le jeu (pour toujours)
+		Weekly = { Week = Config.CurrentWeek(), Best = 0, Strength = 0, Launches = 0, Robux = 0 }, -- les scores de la semaine (classements Weekly)
 		Best = 0,
 		Strength = 0, -- points de Force gagnés avec les haltères (on les garde)
 		Potions = { Potion5 = 0, Potion10 = 0, Potion20 = 0 }, -- les potions qu'on a (pas encore bues)
@@ -429,6 +454,17 @@ end)
 
 -- Quand un joueur achète le pass "x2 Force" pendant la partie
 -- (on revérifie aussi si le joueur l'avait déjà, par exemple le créateur du jeu)
+-- Les Robux dépensés (classement ROBUX SPENT) : on ajoute le prix de chaque pass acheté
+MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
+	local data = playerData[player]
+	if purchased and data then
+		local ok, info = pcall(MarketplaceService.GetProductInfo, MarketplaceService, passId, Enum.InfoType.GamePass)
+		local price = ok and info and tonumber(info.PriceInRobux) or 0
+		data.RobuxSpent += price
+		getWeekly(data).Robux += price
+	end
+end)
+
 MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
 	if passId ~= Config.X2ForcePassId or not playerData[player] then
 		return
@@ -454,5 +490,5 @@ end)
 return {
 	playerData = playerData, sendState = sendState, petKey = petKey,
 	getBonuses = getBonuses, getMultiplier = getMultiplier, getForce = getForce, getCoinMultiplier = getCoinMultiplier,
-	countOwned = countOwned, countEquipped = countEquipped, equipBest = equipBest,
+	countOwned = countOwned, countEquipped = countEquipped, equipBest = equipBest, getWeekly = getWeekly,
 }

@@ -187,6 +187,7 @@ local function collectDumbbell(model, player)
 	local diamonds = model:GetAttribute("Diamonds") or 0
 	data.Diamonds += diamonds
 	data.Strength += value
+	Data.getWeekly(data).Strength += value -- (classement STRENGTH de la semaine : la Force gagnée)
 	sendState(player)
 	-- Tous les joueurs voient l'animation ; celui qui ramasse voit aussi "💪 +X"
 	DumbbellCollected:FireAllClients(player, model, value, { Base = base, Pets = petBonus, X2 = data.HasX2, Diamonds = diamonds })

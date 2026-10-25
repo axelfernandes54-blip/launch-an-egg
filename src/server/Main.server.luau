@@ -19,6 +19,7 @@ require(Server.PotionsCodes)  -- les potions et les codes
 require(Server.Lobby)         -- les portails (worlds) et le panneau THROW HERE
 require(Server.Dumbbells)     -- les haltères
 local Leaderboards = require(Server.Leaderboards) -- le TOP THROWS et les tableaux
+require(Server.GlobalBoards)  -- les classements de tous les serveurs (le grand panneau, touche E)
 
 -- Chaque seconde : la potion s'écoule, les classements se mettent à jour
 -- (les pièces se gagnent en lançant : les pets donnent un multiplicateur, voir Launch)

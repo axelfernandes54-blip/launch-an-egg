@@ -82,6 +82,27 @@ Config.Worlds = {
 -- on clique "Claim" et on gagne pour toujours StrengthPerRow de Force en plus (0.05 = +5 %).
 Config.IndexReward = { StrengthPerRow = 0.05 }
 
+-- Les CLASSEMENTS (le grand panneau du lobby, touche E) : tous les serveurs, "Weekly" et "Lifetime".
+-- Title / Column : ce qu'on voit (anglais). Color : la couleur de la fenêtre. Icon : le bouton à gauche.
+-- La semaine recommence chaque lundi à 0 h (heure UTC).
+Config.Leaderboards = {
+	{ Id = "Throw",    Title = "LONGEST THROW", Column = "DISTANCE", Icon = "🚀", Color = Color3.fromRGB(225, 85, 85) },
+	{ Id = "Strength", Title = "STRENGTH",      Column = "STRENGTH", Icon = "💪", Color = Color3.fromRGB(40, 200, 185) },
+	{ Id = "Launches", Title = "EGGS LAUNCHED", Column = "EGGS",     Icon = "🥚", Color = Color3.fromRGB(60, 160, 235) },
+	{ Id = "Robux",    Title = "ROBUX SPENT",   Column = "ROBUX",    Icon = "💸", Color = Color3.fromRGB(80, 200, 80) },
+}
+Config.LeaderboardSize = 10 -- nombre de joueurs affichés dans chaque classement
+
+local WEEK = 7 * 24 * 3600
+local MONDAY_OFFSET = 4 * 24 * 3600 -- le 1er janvier 1970 était un jeudi : on décale pour que la semaine commence le lundi
+function Config.CurrentWeek(now)
+	return math.floor(((now or os.time()) - MONDAY_OFFSET) / WEEK)
+end
+function Config.WeekSecondsLeft(now)
+	now = now or os.time()
+	return (Config.CurrentWeek(now) + 1) * WEEK + MONDAY_OFFSET - now
+end
+
 -- Les pièces 💰 gagnées à chaque lancer : la distance affichée x LaunchCoinsPerStud (x le bonus de pièces)
 Config.LaunchCoinsPerStud = 0.1
 
@@ -259,7 +280,7 @@ end
 -- La dimension où vole un œuf qui doit aller à cette distance (affichée)
 function Config.DimensionForDistance(displayDistance)
 	for _, dimension in Config.Dimensions do
-		if displayDistance < dimension.Finish then
+		if displayDistance <= dimension.Finish then
 			return dimension
 		end
 	end
