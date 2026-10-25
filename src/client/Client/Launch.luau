@@ -32,6 +32,10 @@ local gaugeHolder = make("Frame", {
 	Visible = false,
 }, gui)
 local gaugeStroke = make("UIStroke", { Thickness = 4, Color = Color3.fromRGB(25, 20, 35) }, gaugeHolder)
+-- dans la zone de tir, la jauge prend la place de la barre d'icônes du bas
+gaugeHolder:GetPropertyChangedSignal("Visible"):Connect(function()
+	UI.Hud.hotbar.Visible = not gaugeHolder.Visible
+end)
 round(gaugeHolder, 15)
 
 -- Le fond (le CanvasGroup coupe le remplissage aux coins arrondis)

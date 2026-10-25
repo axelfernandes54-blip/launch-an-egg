@@ -21,7 +21,7 @@ local clearChildren, badge, bonusChip, equippedCount, petsSignature = UI.clearCh
 
 local buyX2, formatTime, openInventoryCategory = UI.Windows.buyX2, UI.Windows.formatTime, UI.Windows.openInventoryCategory
 
--- À gauche : les tuiles Quests, Claim!, Daily Login, Index -------------------
+-- À gauche : les tuiles Quests, Claim!, Daily Login ---------------------------
 
 -- Une tuile carrée : un rond de couleur avec un emoji, et son nom en dessous
 local function makeTile(parent, emoji, text, color, props, onClick)
@@ -33,8 +33,7 @@ local function makeTile(parent, emoji, text, color, props, onClick)
 	border(tile, 3)
 	local face = make("Frame", { Size = UDim2.new(1, 0, 1, -5), BackgroundColor3 = Color3.new(1, 1, 1) }, tile)
 	round(face, 20)
-	gradient(face, Theme.PanelLight, Theme.Panel)
-	make("UIStroke", { Thickness = 2, Color = Theme.Gold, Transparency = 0.25 }, face)
+	gradient(face, Theme.Panel, Theme.PanelLight)
 	local bubble = make("Frame", {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, 7),
@@ -77,23 +76,20 @@ end
 local leftColumn = make("Frame", {
 	AnchorPoint = Vector2.new(0, 0.5),
 	Position = UDim2.new(0, 16, 0.5, 30),
-	Size = UDim2.new(0, 88, 0, 4 * 88 + 3 * 22),
+	Size = UDim2.new(0, 88, 0, 3 * 88 + 2 * 22),
 	BackgroundTransparency = 1,
 }, gui)
 local TILE_SIZE = UDim2.new(0, 88, 0, 88)
 makeTile(leftColumn, "🏆", "Quests", ButtonStyles.Gold[2], { Size = TILE_SIZE }, comingSoon)
 makeTile(leftColumn, "🎁", "Claim!", ButtonStyles.Green[2], { Size = TILE_SIZE, Position = UDim2.new(0, 0, 0, 110) }, comingSoon)
 makeTile(leftColumn, "📅", "Daily Login", ButtonStyles.Blue[2], { Size = TILE_SIZE, Position = UDim2.new(0, 0, 0, 220) }, comingSoon)
-makeTile(leftColumn, "📖", "Index", ButtonStyles.Purple[2], { Size = TILE_SIZE, Position = UDim2.new(0, 0, 0, 330) }, function()
-	openWindow("Index")
-end)
 
 -- À droite : les compteurs, le Shop et les boutons --------------------------------
 
 local rightColumn = make("Frame", {
 	AnchorPoint = Vector2.new(1, 0),
 	Position = UDim2.new(1, -16, 0, 14),
-	Size = UDim2.new(0, 226, 0, 480),
+	Size = UDim2.new(0, 226, 0, 290),
 	BackgroundTransparency = 1,
 }, gui)
 
@@ -127,17 +123,14 @@ local function makeCounter(y, emoji, color, onPlus)
 	return value
 end
 
--- En haut à droite : deux petits boutons, Friends et Settings
+-- En haut à droite : le petit bouton Friends (Settings est dans la barre du bas)
 local function smallButton(emoji, position, onClick)
 	local button = fancyButton(rightColumn, "Blue", "", { AnchorPoint = Vector2.new(1, 0), Position = position, Size = UDim2.new(0, 48, 0, 48) })
 	icon(button.Button:FindFirstChildWhichIsA("Frame"), emoji, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.65, 0.65) })
 	button.Button.Activated:Connect(onClick)
 	return button
 end
-smallButton("⚙️", UDim2.new(1, 0, 0, 0), function()
-	openWindow("Settings")
-end)
-smallButton("👥", UDim2.new(1, -58, 0, 0), function()
+smallButton("👥", UDim2.new(1, 0, 0, 0), function()
 	-- invite des amis à rejoindre le jeu (fenêtre officielle de Roblox)
 	local ok, canInvite = pcall(SocialService.CanSendGameInviteAsync, SocialService, player)
 	if ok and canInvite then
@@ -169,24 +162,83 @@ local coinRate = label(rightColumn, {
 	TextXAlignment = Enum.TextXAlignment.Right,
 }, 2)
 
-local shopButton = fancyButton(rightColumn, "Gold", "🛒 SHOP", { Position = UDim2.new(0, 0, 0, 226), Size = UDim2.new(0.5, -6, 0, 66) })
-shopButton.Button.Activated:Connect(function()
-	openWindow("Shop")
-end)
-local upgradesButton = fancyButton(rightColumn, "Blue", "⚡ UPGRADES", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 226), Size = UDim2.new(0.5, -6, 0, 66) })
-upgradesButton.Button.Activated:Connect(function()
-	openWindow("Upgrades")
-end)
+local autoButton = fancyButton(rightColumn, "Red", "AUTO LAUNCH", { Position = UDim2.new(0, 0, 0, 228), Size = UDim2.new(1, 0, 0, 58) })
+autoButton.Button.Activated:Connect(comingSoon)
 
-local GRID_TILE = UDim2.new(0, 104, 0, 92)
-local _, dot = makeTile(rightColumn, "🎒", "Inventory", ButtonStyles.Teal[2], { Size = GRID_TILE, Position = UDim2.new(0, 0, 0, 308) }, function()
+-- En bas au centre : la barre de grosses icônes (Pets, Shop, Upgrades, Index, Trade, Settings) ------
+
+local HOTBAR_BUTTON = 74
+local hotbar = make("Frame", {
+	AnchorPoint = Vector2.new(0.5, 1),
+	Position = UDim2.new(0.5, 0, 1, -20),
+	Size = UDim2.new(0, 0, 0, HOTBAR_BUTTON),
+	AutomaticSize = Enum.AutomaticSize.X,
+	BackgroundTransparency = 1,
+}, gui)
+make("UIListLayout", {
+	FillDirection = Enum.FillDirection.Horizontal,
+	Padding = UDim.new(0, 14),
+	SortOrder = Enum.SortOrder.LayoutOrder,
+	VerticalAlignment = Enum.VerticalAlignment.Bottom,
+}, hotbar)
+
+-- Un bouton de la barre : un carré blanc au gros contour, une grosse icône et son nom en dessous
+local function hotbarButton(order, emoji, text, onClick)
+	local button = make("TextButton", {
+		Name = "Hotbar_" .. text,
+		Size = UDim2.new(0, HOTBAR_BUTTON, 0, HOTBAR_BUTTON),
+		BackgroundColor3 = Theme.PanelDark,
+		Text = "",
+		AutoButtonColor = false,
+		LayoutOrder = order,
+	}, hotbar)
+	round(button, 18)
+	border(button, 4)
+	local face = make("Frame", { Size = UDim2.new(1, 0, 1, -5), BackgroundColor3 = Color3.new(1, 1, 1) }, button)
+	round(face, 18)
+	gradient(face, Theme.Panel, Theme.PanelLight)
+	icon(face, emoji, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.44, 0), Size = UDim2.fromScale(0.68, 0.68), Rotation = -6 })
+	label(button, {
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, 8),
+		Size = UDim2.new(1, 20, 0, 24),
+		Text = text,
+		Font = TITLE_FONT,
+	}, 2.5)
+	-- le petit point rouge "nouveau !"
+	local dot = make("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(1, -6, 0, 6),
+		Size = UDim2.new(0, 26, 0, 26),
+		BackgroundColor3 = ButtonStyles.Red[2],
+		Visible = false,
+		ZIndex = 3,
+	}, button)
+	round(dot, 13)
+	border(dot, 2)
+	label(dot, { Size = UDim2.new(1, -8, 1, -8), Position = UDim2.new(0, 4, 0, 4), Text = "!", Font = TITLE_FONT }, 1.5)
+	pressable(button)
+	button.Activated:Connect(onClick)
+	return button, dot
+end
+
+local _, dot = hotbarButton(1, "🐾", "Pets", function()
 	openWindow("Inventory")
 end)
 UI.inventoryDot = dot
-makeTile(rightColumn, "🔄", "Trade", ButtonStyles.Purple[2], { Size = GRID_TILE, Position = UDim2.new(0, 122, 0, 308) }, comingSoon)
-
-local autoButton = fancyButton(rightColumn, "Red", "AUTO LAUNCH", { Position = UDim2.new(0, 0, 0, 420), Size = UDim2.new(1, 0, 0, 58) })
-autoButton.Button.Activated:Connect(comingSoon)
+hotbarButton(2, "🛒", "Shop", function()
+	openWindow("Shop")
+end)
+hotbarButton(3, "⚡", "Upgrades", function()
+	openWindow("Upgrades")
+end)
+hotbarButton(4, "📖", "Index", function()
+	openWindow("Index")
+end)
+hotbarButton(5, "🔄", "Trade", comingSoon)
+hotbarButton(6, "⚙️", "Settings", function()
+	openWindow("Settings")
+end)
 
 -- La barre de progression des zones (en haut de l'écran) ---------------------
 -- Chaque zone prend la même largeur sur la barre, même si elle est plus longue dans le jeu.
@@ -433,7 +485,7 @@ end)
 
 local strengthWidget = make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 1),
-	Position = UDim2.new(0.5, 0, 1, -92),
+	Position = UDim2.new(0.5, 0, 1, -118),
 	Size = UDim2.new(0, 390, 0, 74),
 	BackgroundTransparency = 1,
 }, gui)
@@ -481,7 +533,7 @@ end
 -- La potion active : une petite potion avec le temps qui reste, à droite de la Force
 local boostTimer = make("TextButton", {
 	AnchorPoint = Vector2.new(0, 1),
-	Position = UDim2.new(0.5, 214, 1, -96),
+	Position = UDim2.new(0.5, 214, 1, -122),
 	Size = UDim2.new(0, 140, 0, 56),
 	BackgroundColor3 = Theme.PanelDark,
 	Text = "",
@@ -514,7 +566,7 @@ end
 -- les bonus de l'équipe de pets, au-dessus de la Force
 local boostRow = make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 1),
-	Position = UDim2.new(0.5, 0, 1, -172),
+	Position = UDim2.new(0.5, 0, 1, -198),
 	Size = UDim2.new(0, 700, 0, 34),
 	BackgroundTransparency = 1,
 }, gui)
@@ -554,7 +606,7 @@ updateBoosts()
 
 
 UI.Hud = {
-	baseLabel = baseLabel, bestValue = bestValue, coinRate = coinRate, coinsValue = coinsValue, portal = portal,
+	baseLabel = baseLabel, bestValue = bestValue, coinRate = coinRate, coinsValue = coinsValue, portal = portal, hotbar = hotbar,
 	rerollsValue = rerollsValue, showX2 = showX2, strengthLabel = strengthLabel, strengthScale = strengthScale,
 	updateBoostTimer = updateBoostTimer, updateBoosts = updateBoosts,
 }

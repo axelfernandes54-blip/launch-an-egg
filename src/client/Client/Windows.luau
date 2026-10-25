@@ -347,7 +347,7 @@ do
 		Text = "",
 		PlaceholderText = "Type a code...",
 		PlaceholderColor3 = Theme.SubText,
-		TextColor3 = Theme.Text,
+		TextColor3 = OUTLINE,
 		TextScaled = true,
 		Font = TITLE_FONT,
 		ClearTextOnFocus = false,

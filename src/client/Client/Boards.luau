@@ -169,7 +169,18 @@ local function setupBoard(model)
 			screen = part
 		end
 	end
-	if not screen or screens[screen] then
+	if not screen then
+		-- (avec le streaming, l'écran peut arriver un peu après le panneau : on réessaie quand il arrive)
+		local connection
+		connection = model.DescendantAdded:Connect(function(part)
+			if part:IsA("BasePart") and part.Name:find("Screen") then
+				connection:Disconnect()
+				setupBoard(model)
+			end
+		end)
+		return
+	end
+	if screens[screen] then
 		return
 	end
 	local gui = make("SurfaceGui", {

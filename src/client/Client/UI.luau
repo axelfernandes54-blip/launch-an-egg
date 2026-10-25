@@ -44,17 +44,20 @@ local camera = workspace.CurrentCamera
 
 -- Le style de l'interface (toutes les couleurs et polices sont ici) -------------
 
-local TITLE_FONT = Enum.Font.LuckiestGuy -- police "dessin animé" pour les titres et boutons
+local TITLE_FONT = Enum.Font.FredokaOne -- police ronde et grasse pour les titres et boutons
 local NUMBER_FONT = Enum.Font.FredokaOne -- police ronde pour les nombres et les textes
 local OUTLINE = Color3.fromRGB(14, 18, 40) -- le contour foncé de tout
 
+-- Style "blanc et contour foncé" (comme la capture de Katia du 25/10)
 local Theme = {
-	Panel = Color3.fromRGB(36, 56, 112),      -- bleu nuit des fenêtres
-	PanelDark = Color3.fromRGB(18, 28, 64),   -- bleu très foncé (fonds, cadres)
-	PanelLight = Color3.fromRGB(56, 84, 156), -- bleu plus clair (cartes)
-	Gold = Color3.fromRGB(255, 205, 80),      -- or des liserés
+	Panel = Color3.fromRGB(255, 255, 255),     -- blanc des fenêtres
+	PanelDark = Color3.fromRGB(226, 232, 244), -- gris-bleu clair (cadres, pastilles)
+	PanelLight = Color3.fromRGB(243, 246, 252), -- presque blanc (cartes)
+	Pattern = Color3.fromRGB(224, 230, 243),   -- les petits motifs du fond des fenêtres
+	Gold = Color3.fromRGB(255, 205, 80),       -- or
 	Text = Color3.new(1, 1, 1),
-	SubText = Color3.fromRGB(190, 210, 255),
+	SubText = Color3.fromRGB(120, 128, 152),   -- texte gris (sans contour)
+	Accent = Color3.fromRGB(40, 170, 255),     -- bleu des petits compteurs (ex. 2/4)
 }
 
 -- Les couleurs des boutons : { haut du dégradé, bas du dégradé, relief en dessous }
@@ -121,7 +124,13 @@ local function label(parent, props, strokeThickness)
 	for key, value in props do
 		text[key] = value
 	end
-	make("UIStroke", { Thickness = strokeThickness or 2, Color = OUTLINE }, text)
+	-- le texte gris n'a pas de contour (plus propre sur fond blanc)
+	local stroke = make("UIStroke", { Thickness = strokeThickness or 2, Color = OUTLINE }, text)
+	local function updateStroke()
+		stroke.Enabled = text.TextColor3 ~= Theme.SubText
+	end
+	updateStroke()
+	text:GetPropertyChangedSignal("TextColor3"):Connect(updateStroke)
 	return text
 end
 
@@ -399,15 +408,24 @@ local function makeWindow(name, title, emoji, width, height)
 		Visible = false,
 		ZIndex = 21,
 	}, gui)
-	round(frame, 26)
-	border(frame, 4)
-	gradient(frame, Theme.Panel, Theme.PanelDark)
+	round(frame, 22)
+	border(frame, 5)
 	local scale = make("UIScale", {}, frame)
 
-	-- le liseré doré à l'intérieur
-	local trim = make("Frame", { Position = UDim2.new(0, 7, 0, 7), Size = UDim2.new(1, -14, 1, -14), BackgroundTransparency = 1 }, frame)
-	round(trim, 20)
-	make("UIStroke", { Thickness = 2, Color = Theme.Gold, Transparency = 0.4 }, trim)
+	-- le fond à petits motifs (œufs et étoiles très pâles)
+	local pattern = make("Frame", { Position = UDim2.new(0, 12, 0, 12), Size = UDim2.new(1, -24, 1, -24), BackgroundTransparency = 1, ClipsDescendants = true }, frame)
+	for row = 0, math.ceil(height / 46) do
+		make("TextLabel", {
+			Position = UDim2.new(0, row % 2 == 0 and -10 or -36, 0, row * 46),
+			Size = UDim2.new(0, width + 60, 0, 30),
+			BackgroundTransparency = 1,
+			Text = string.rep("★      ●      ", math.ceil(width / 80) + 1),
+			TextColor3 = Theme.Pattern,
+			TextSize = 26,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Font = TITLE_FONT,
+		}, pattern)
+	end
 
 	-- le contenu de la fenêtre
 	local content = make("Frame", {
@@ -417,33 +435,39 @@ local function makeWindow(name, title, emoji, width, height)
 		ZIndex = 2,
 	}, frame)
 
-	-- le ruban doré du titre, qui dépasse en haut
-	local ribbon = make("Frame", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0, 2),
-		Size = UDim2.new(0, math.min(width - 140, 400), 0, 60),
-		BackgroundColor3 = ButtonStyles.Gold[3],
+	-- le titre dans le coin en haut à gauche : une grosse icône et le nom (ex. "Pets!")
+	local niceTitle = string.gsub(string.lower(title), "(%a)([%w']*)", function(first, rest)
+		return string.upper(first) .. rest
+	end)
+	local titleBox = make("Frame", {
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, -18, 0, 2),
+		Size = UDim2.new(0, 0, 0, 64),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundTransparency = 1,
 		ZIndex = 5,
 	}, frame)
-	round(ribbon, 18)
-	border(ribbon, 4)
-	local ribbonFace = make("Frame", { Size = UDim2.new(1, 0, 1, -6), BackgroundColor3 = Color3.new(1, 1, 1) }, ribbon)
-	round(ribbonFace, 18)
-	gradient(ribbonFace, ButtonStyles.Gold[1], ButtonStyles.Gold[2])
-	shine(ribbonFace, 12)
-	label(ribbonFace, {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.52),
-		Size = UDim2.new(1, -24, 0.72, 0),
-		Text = emoji .. " " .. title,
+	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 4) }, titleBox)
+	local titleIcon = make("Frame", { Size = UDim2.new(0, 64, 0, 64), BackgroundColor3 = Color3.new(1, 1, 1), Rotation = -8, LayoutOrder = 1 }, titleBox)
+	round(titleIcon, 16)
+	border(titleIcon, 4)
+	icon(titleIcon, emoji, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.78, 0.78) })
+	local titleText = label(titleBox, {
+		Size = UDim2.new(0, 0, 0, 52),
+		AutomaticSize = Enum.AutomaticSize.X,
+		TextScaled = false,
+		TextSize = 46,
+		Text = niceTitle,
 		Font = TITLE_FONT,
-	}, 3)
+		LayoutOrder = 2,
+	}, 4)
+	make("UIPadding", { PaddingRight = UDim.new(0, 6) }, titleText)
 
-	-- la croix rouge pour fermer, dans le coin
+	-- la croix rouge pour fermer, collée au coin en haut à droite
 	local close = fancyButton(frame, "Red", "X", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(1, -12, 0, 12),
-		Size = UDim2.new(0, 54, 0, 54),
+		Position = UDim2.new(1, -6, 0, 6),
+		Size = UDim2.new(0, 62, 0, 62),
 		ZIndex = 6,
 	})
 	close.Button.Activated:Connect(function()
@@ -498,6 +522,16 @@ function closeWindow()
 		end
 	end)
 end
+
+-- Pour les tests dans Studio : mettre l'attribut "OpenWindow" de LaunchGui ouvre cette fenêtre
+screenGui:GetAttributeChangedSignal("OpenWindow"):Connect(function()
+	local name = screenGui:GetAttribute("OpenWindow")
+	if windows[name] then
+		openWindow(name)
+	elseif name == "" and UI.openWindowName then
+		closeWindow()
+	end
+end)
 
 -- Vide un cadre (sauf ses réglages de mise en page)
 local function clearChildren(parent)
