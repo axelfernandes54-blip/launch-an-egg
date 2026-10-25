@@ -1,5 +1,5 @@
 -- Shop (ModuleScript dans ServerScriptService > Server)
--- Les améliorations achetées avec les pièces (Power Up). Le pass x2 Strength est dans PlayerData.
+-- Les upgrades achetées avec les diamants 💎 (Kick Power, Magnet Range...). Le pass x2 Strength est dans PlayerData.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,27 +20,24 @@ local playerData, sendState, petKey = Data.playerData, Data.sendState, Data.petK
 local getBonuses, getMultiplier, getForce, getCoinsPerSecond = Data.getBonuses, Data.getMultiplier, Data.getForce, Data.getCoinsPerSecond
 local countOwned, countEquipped, equipBest = Data.countOwned, Data.countEquipped, Data.equipBest
 
-local upgradePrompt = nil -- (l'ancien stand "Force +" du lobby n'existe plus)
 
--- 5) L'amélioration "Force +" -------------------------------------------------
-
-local function buyUpgrade(player)
+-- Les upgrades, achetées avec les diamants 💎 (voir Config.Upgrades) --------------
+BuyUpgrade.OnServerEvent:Connect(function(player, upgradeId)
 	local data = playerData[player]
-	if not data then
+	local upgrade = typeof(upgradeId) == "string" and Config.GetUpgrade(upgradeId)
+	if not (data and upgrade) then
 		return
 	end
-	local cost = Config.UpgradeCost(data.UpgradeLevel)
-	if data.Coins >= cost then
-		data.Coins -= cost
-		data.UpgradeLevel += 1
+	local level = data.Upgrades[upgrade.Id] or 0
+	if level >= upgrade.MaxLevel then
+		return -- déjà au maximum
+	end
+	local cost = Config.UpgradeCost(upgrade.Id, level)
+	if data.Diamonds >= cost then
+		data.Diamonds -= cost
+		data.Upgrades[upgrade.Id] = level + 1
 		sendState(player)
 	end
-end
-
--- On peut acheter avec le bouton de l'écran ou au stand "FORCE +" du lobby
-BuyUpgrade.OnServerEvent:Connect(buyUpgrade)
-if upgradePrompt then
-	upgradePrompt.Triggered:Connect(buyUpgrade)
-end
+end)
 
 return {}

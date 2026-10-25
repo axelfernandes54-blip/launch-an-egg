@@ -15,14 +15,14 @@ local function makeRemote(name)
 end
 
 local LaunchEgg = makeRemote("LaunchEgg")       -- client -> serveur : "je lance avec cette puissance"
-local BuyUpgrade = makeRemote("BuyUpgrade")     -- client -> serveur : "j'achète Force +"
+local BuyUpgrade = makeRemote("BuyUpgrade")     -- client -> serveur : "j'achète un niveau de cette upgrade" (en diamants)
 local EggLaunched = makeRemote("EggLaunched")   -- serveur -> client : "voici ton œuf en vol"
 local EggLanded = makeRemote("EggLanded")       -- serveur -> client : "ton œuf a atterri, voici ton pet"
 local StateChanged = makeRemote("StateChanged") -- serveur -> client : pièces, pets, bonus...
 local DumbbellCollected = makeRemote("DumbbellCollected") -- serveur -> clients : "une haltère vient d'être ramassée"
 local EquipPet = makeRemote("EquipPet")         -- client -> serveur : "équipe / déséquipe ce pet"
 local EquipBest = makeRemote("EquipBest")       -- client -> serveur : "équipe mes meilleurs pets"
-local RerollTrait = makeRemote("RerollTrait")   -- client -> serveur : "change le trait de ce pet" (payé en pièces)
+local RerollTrait = makeRemote("RerollTrait")   -- client -> serveur : "change le trait de ce pet" (payé en diamants)
 local TraitRerolled = makeRemote("TraitRerolled") -- serveur -> client : "voici le nouveau trait"
 local OpenTraits = makeRemote("OpenTraits")     -- serveur -> client : "ouvre la fenêtre du Trait Master"
 local SetUIScale = makeRemote("SetUIScale")     -- client -> serveur : "garde ma taille d'interface"
@@ -38,11 +38,13 @@ local DuoRespond = makeRemote("DuoRespond")     -- client -> serveur : "j'accept
 local DuoLeave = makeRemote("DuoLeave")         -- client -> serveur : "je quitte le duo"
 local DuoInvited = makeRemote("DuoInvited")     -- serveur -> client : "ce joueur t'invite à tirer avec lui"
 local DuoUpdate = makeRemote("DuoUpdate")       -- serveur -> client : ton duo (partenaire, prêt ?) ou nil
+local OpenDimensions = makeRemote("OpenDimensions") -- serveur -> client : "ouvre la fenêtre des dimensions"
+local ChooseDimension = makeRemote("ChooseDimension") -- client -> serveur : "je débloque / je vais dans cette dimension"
 return {
 	LaunchEgg = LaunchEgg, BuyUpgrade = BuyUpgrade, EggLaunched = EggLaunched, EggLanded = EggLanded,
 	StateChanged = StateChanged, DumbbellCollected = DumbbellCollected, EquipPet = EquipPet, EquipBest = EquipBest,
 	RerollTrait = RerollTrait, TraitRerolled = TraitRerolled, OpenTraits = OpenTraits, SetUIScale = SetUIScale,
 	World2Unlocked = World2Unlocked, ShowMessage = ShowMessage, UsePotion = UsePotion, OpenCodes = OpenCodes,
 	RedeemCode = RedeemCode, DuoInvite = DuoInvite, DuoRespond = DuoRespond, DuoLeave = DuoLeave,
-	DuoInvited = DuoInvited, DuoUpdate = DuoUpdate,
+	DuoInvited = DuoInvited, DuoUpdate = DuoUpdate, OpenDimensions = OpenDimensions, ChooseDimension = ChooseDimension,
 }

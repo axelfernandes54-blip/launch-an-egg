@@ -267,7 +267,7 @@ DumbbellCollected.OnClientEvent:Connect(function(collector, model, value, info)
 	local text = make("TextLabel", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
-		Text = (info and (info.Rerolls or 0) > 0) and ("💎 +" .. info.Rerolls .. " Reroll!") or ("💪 +" .. value),
+		Text = (value > 0 and ("💪 +" .. value) or "") .. ((info and (info.Diamonds or 0) > 0) and ((value > 0 and "  " or "") .. "💎 +" .. info.Diamonds) or ""),
 		TextColor3 = color:Lerp(Color3.new(1, 1, 1), 0.3),
 		TextScaled = true,
 		Font = NUMBER_FONT,

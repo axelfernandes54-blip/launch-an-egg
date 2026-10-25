@@ -154,9 +154,9 @@ local bestValue = makeCounter(168, "🏁", ButtonStyles.Blue[2], function()
 	toast("Check the leaderboards in the lobby!")
 end)
 
--- les Rerolls 💎 (pour le Trait Master) : on les gagne en jouant
+-- les diamants 💎 (upgrades et Trait Master) : on les gagne seulement avec les haltères
 local rerollsValue = makeCounter(112, CRYSTAL_IMAGE, ButtonStyles.Purple[2], function()
-	toast("Earn 💎 by launching eggs far! Use them at the Trait Master.")
+	openWindow("Upgrades")
 end)
 
 -- les pièces gagnées chaque seconde (avec le bonus des pets), à gauche du compteur
@@ -254,18 +254,19 @@ for index, zone in Config.Zones do
 	end
 end
 
--- Les distances sous la barre : START, 100, 300, 600, 1K, 1.8K
-local ticks = { 0 }
+-- Les distances sous la barre, selon la dimension (Dimension 1 : START ... 10K ; Dimension 2 : 10K ... 100K)
+local ticks = { 0 } -- (en studs réels sur la piste)
 for _, zone in Config.Zones do
 	table.insert(ticks, zone.Finish)
 end
+local tickLabels = {}
 for _, distance in ticks do
-	make("TextLabel", {
+	tickLabels[distance] = make("TextLabel", {
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(distanceToBar(distance), 0, 1, 4),
 		Size = UDim2.new(0, 70, 0, 18),
 		BackgroundTransparency = 1,
-		Text = distance == 0 and "START" or formatNumber(distance) .. " studs",
+		Text = "",
 		TextColor3 = Color3.new(1, 1, 1),
 		TextStrokeTransparency = 0,
 		TextSize = 16,
@@ -274,7 +275,7 @@ for _, distance in ticks do
 end
 
 -- Le titre au-dessus du bout de la barre
-make("TextLabel", {
+local barTitle = make("TextLabel", {
 	AnchorPoint = Vector2.new(1, 1),
 	Position = UDim2.new(1, 0, 0, -2),
 	Size = UDim2.new(0, 160, 0, 24),
@@ -287,7 +288,24 @@ make("TextLabel", {
 	Font = TITLE_FONT,
 }, progressArea)
 
--- Le portail qui tourne après la fin de la barre (pour un futur monde 2 !)
+-- Met la barre à la dimension du joueur (appelé quand les infos du serveur arrivent)
+local shownDimension = nil
+local function showDimension(dimensionId)
+	if dimensionId == shownDimension then
+		return
+	end
+	shownDimension = dimensionId
+	local dimension = Config.GetDimension(dimensionId)
+	barTitle.Text = dimension.Name
+	for distance, tickLabel in tickLabels do
+		local shown = Config.ToDisplayDistance(distance, dimensionId)
+		tickLabel.Text = shown == 0 and "START" or formatNumber(shown)
+	end
+end
+showDimension(1)
+UI.showDimension = showDimension
+
+-- Le portail qui tourne après la fin de la barre (la dimension suivante)
 local portal = make("Frame", {
 	AnchorPoint = Vector2.new(0, 0.5),
 	Position = UDim2.new(1, 12, 0.5, 0),
@@ -393,9 +411,10 @@ RunService.RenderStepped:Connect(function(dt)
 	eggMarker.Visible = false -- (l'ancien petit œuf : c'est maintenant notre tête qui suit l'œuf)
 	if UI.trackedEgg and UI.trackedEgg.Parent then
 		-- pendant le vol, la tête suit l'œuf et affiche la distance en direct
-		local distance = math.max(0, math.floor(UI.trackedEgg.Position.X))
-		markerProgress = distanceToBar(distance)
-		recordLabel.Text = string.format("You: %d studs\n▼", distance)
+		local trackDistance = math.max(0, UI.trackedEgg.Position.X)
+		markerProgress = distanceToBar(trackDistance)
+		local shown = Config.ToDisplayDistance(trackDistance, UI.state and UI.state.Dimension or 1)
+		recordLabel.Text = "You: " .. formatNumber(shown) .. " studs\n▼"
 	else
 		-- sinon, elle revient doucement au départ
 		markerProgress += (0 - markerProgress) * math.min(1, dt * 4)

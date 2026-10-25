@@ -19,16 +19,22 @@ local UsePotion, OpenCodes, RedeemCode = Remotes.UsePotion, Remotes.OpenCodes, R
 
 -- 3) Les données des joueurs -------------------------------------------------
 
-local playerData = {} -- [player] = { Coins, Pets, UpgradeLevel, Best, Busy, leaderstats... }
+local playerData = {} -- [player] = { Coins, Diamonds, Pets, Upgrades, Best, Busy, leaderstats... }
 
 -- Les pets équipés (au plus Config.Launch.MaxEquipped) donnent leurs bonus :
 -- la Force de leur rareté + leur capacité spéciale (voir PetConfig > PetAbilities).
+-- Les upgrades (achetées en diamants 💎) s'ajoutent aux bonus des pets.
 local function getBonuses(data)
-	return Config.GetBonuses(data.Equipped)
+	local bonuses = Config.GetBonuses(data.Equipped)
+	local levels = data.Upgrades or {}
+	bonuses.Luck += Config.UpgradeBonus("Luck", levels.Luck)
+	bonuses.Coins += Config.UpgradeBonus("Coins", levels.Coins)
+	bonuses.Dumbbell += Config.UpgradeBonus("Lifting", levels.Lifting)
+	return bonuses
 end
 
 local function getMultiplier(data)
-	return (1 + data.UpgradeLevel * Config.Upgrade.BonusPerLevel) * getBonuses(data).Strength
+	return (1 + Config.UpgradeBonus("Power", data.Upgrades.Power)) * getBonuses(data).Strength
 end
 
 -- La Force totale (💪) : Force de départ + haltères, multipliée par les améliorations et les pets.
@@ -133,16 +139,16 @@ local function sendState(player)
 		BaseForce = Config.BaseForce + data.Strength,
 		Force = math.floor(getForce(data)),
 		HasX2 = data.HasX2,
-		UpgradeLevel = data.UpgradeLevel,
-		UpgradeCost = Config.UpgradeCost(data.UpgradeLevel),
+		Upgrades = data.Upgrades, -- [Id de l'upgrade] = niveau
 		Best = data.Best,
 		PetCount = #data.Pets,
 		RarityCounts = rarityCounts,
 		PetCounts = petCounts,
 		NameCounts = nameCounts,
-		Rerolls = data.Rerolls,
+		Diamonds = data.Diamonds,
 		UIScale = data.UIScale,
-		World2Unlocked = data.World2Unlocked,
+		Dimension = data.Dimension, -- la dimension où on joue
+		UnlockedDimensions = data.UnlockedDimensions, -- [Id] = true
 		Equipped = data.Equipped,
 		MaxEquipped = Config.Launch.MaxEquipped,
 		Bonuses = getBonuses(data),
@@ -152,13 +158,13 @@ local function sendState(player)
 end
 
 -- La sauvegarde de la progression (DataStore) -------------------------------
--- On garde : la Force des haltères, les pièces, les pets, le record et le niveau de Power Up.
+-- On garde : la Force des haltères, les pièces, les diamants, les pets, le record, les upgrades et les dimensions.
 -- Une sauvegarde par joueur, avec la clé "Player_<UserId>".
 
 -- (24/10/2026 : tout le monde repart de zéro avec "PlayerProgress_v2" ;
 --  les anciennes sauvegardes sont gardées dans "PlayerProgress_v1", on peut y revenir en remettant ce nom)
 local progressStore = DataStoreService:GetDataStore("PlayerProgress_v2")
-local SAVE_VERSION = 1 -- à augmenter si un jour on change la forme des données sauvegardées
+local SAVE_VERSION = 2 -- 2 = dimensions, diamants et upgrades (25/10/2026) ; à augmenter si on change encore la forme des données
 
 -- Réessaie plusieurs fois si Roblox ne répond pas tout de suite
 local function withRetries(action)
@@ -227,10 +233,36 @@ local function loadProgress(player, data)
 		data.Coins = tonumber(saved.Coins) or 0
 		data.Best = tonumber(saved.Best) or 0
 		data.Strength = tonumber(saved.Strength) or 0
-		data.UpgradeLevel = tonumber(saved.UpgradeLevel) or 0
-		data.Rerolls = tonumber(saved.Rerolls) or 0
 		data.UIScale = math.clamp(tonumber(saved.UIScale) or 1, 0.7, 1.3)
-		data.World2Unlocked = saved.World2Unlocked == true
+		if (tonumber(saved.Version) or 1) < 2 then
+			-- ancienne sauvegarde (avant les dimensions et les diamants, 25/10/2026) :
+			-- le record passe en distance de la Dimension 1, les Rerolls deviennent des diamants,
+			-- le niveau de Power Up devient l'upgrade Kick Power, et le portail touché débloque la Dimension 2
+			data.Best = Config.ToDisplayDistance(data.Best, 1)
+			data.Diamonds = math.floor((tonumber(saved.Rerolls) or 0) * Config.DiamondsPerOldReroll)
+			data.Upgrades.Power = math.clamp(math.floor(tonumber(saved.UpgradeLevel) or 0), 0, Config.GetUpgrade("Power").MaxLevel)
+			if saved.World2Unlocked == true then
+				data.UnlockedDimensions[2] = true
+			end
+		else
+			data.Diamonds = math.max(0, math.floor(tonumber(saved.Diamonds) or 0))
+			if type(saved.Upgrades) == "table" then
+				for _, upgrade in Config.Upgrades do
+					data.Upgrades[upgrade.Id] = math.clamp(math.floor(tonumber(saved.Upgrades[upgrade.Id]) or 0), 0, upgrade.MaxLevel)
+				end
+			end
+			if type(saved.UnlockedDimensions) == "table" then
+				for _, id in saved.UnlockedDimensions do
+					if tonumber(id) then
+						data.UnlockedDimensions[tonumber(id)] = true
+					end
+				end
+			end
+			local dimension = tonumber(saved.Dimension) or 1
+			if data.UnlockedDimensions[dimension] then
+				data.Dimension = dimension
+			end
+		end
 		data.DuoKicks = math.max(0, math.floor(tonumber(saved.DuoKicks) or 0))
 		data.Pets = unpackPets(saved.Pets)
 		-- les potions (les vieilles sauvegardes n'en ont pas : 0)
@@ -265,17 +297,22 @@ local function saveProgress(player, data)
 	for code in data.Codes do
 		table.insert(usedCodes, code)
 	end
+	local unlocked = {}
+	for id in data.UnlockedDimensions do
+		table.insert(unlocked, id)
+	end
 	local snapshot = {
 		Version = SAVE_VERSION,
 		Coins = math.floor(data.Coins),
 		Best = data.Best,
 		Strength = data.Strength,
-		UpgradeLevel = data.UpgradeLevel,
+		Upgrades = data.Upgrades, -- [Id de l'upgrade] = niveau
 		Pets = packPets(data.Pets),
 		Equipped = data.Equipped, -- les pets équipés (liste de noms)
-		Rerolls = data.Rerolls,
+		Diamonds = data.Diamonds,
 		UIScale = data.UIScale,
-		World2Unlocked = data.World2Unlocked,
+		Dimension = data.Dimension,
+		UnlockedDimensions = unlocked, -- les dimensions débloquées (liste d'Id)
 		DuoKicks = data.DuoKicks,
 		Potions = data.Potions,
 		BoostTime = math.floor(data.BoostTime),
@@ -310,11 +347,12 @@ Players.PlayerAdded:Connect(function(player)
 		Coins = 0,
 		Pets = {},
 		Equipped = {}, -- les noms des pets équipés (au plus Config.Launch.MaxEquipped)
-		Rerolls = 0, -- la monnaie 💎 du Trait Master
+		Diamonds = 0, -- les diamants 💎 (gagnés avec les haltères) : upgrades et Trait Master
+		Upgrades = { Power = 0, Magnet = 0, Luck = 0, Coins = 0, Lifting = 0 }, -- niveaux des upgrades
 		UIScale = 1, -- la taille de l'interface choisie dans Settings (0.7 à 1.3)
-		World2Unlocked = false, -- vrai quand un œuf a touché le portail du bout de la piste
+		Dimension = 1, -- la dimension où on joue
+		UnlockedDimensions = { [1] = true }, -- les dimensions débloquées (avec des pièces)
 		DuoKicks = 0, -- nombre de coups de pied à deux réussis
-		UpgradeLevel = 0,
 		Best = 0,
 		Strength = 0, -- points de Force gagnés avec les haltères (on les garde)
 		Potions = { Potion5 = 0, Potion10 = 0, Potion20 = 0 }, -- les potions qu'on a (pas encore bues)

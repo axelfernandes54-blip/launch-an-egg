@@ -1,5 +1,5 @@
 -- Windows (ModuleScript dans StarterPlayer > StarterPlayerScripts > Client)
--- Les fenêtres : Shop (Robux), Upgrades (pièces), Inventory (onglets PETS / POTIONS...), Codes,
+-- Les fenêtres : Shop (Robux), Upgrades (diamants), Dimensions (pièces), Inventory (onglets PETS / POTIONS...), Codes,
 -- Trait Master, Collection, Leaderboard et Settings.
 
 local UI = require(script.Parent.UI)
@@ -95,30 +95,180 @@ do
 	end
 end
 
--- UPGRADES : les améliorations qu'on achète avec les pièces 💰
+-- UPGRADES : les améliorations qu'on achète avec les diamants 💎 (gagnés avec les haltères)
+-- Une ligne par upgrade (voir Config.Upgrades) : "Pet Luck: +5% [+2.5%/Level]", une barre 3/40, le prix et le bouton.
 do
-	local upgrades = makeWindow("Upgrades", "UPGRADES", "⚡", 660, 420)
-	local upInfo, upBuy = offerCard(upgrades.Content, UDim2.new(), "Blue", "⚡", "POWER UP", "+" .. math.round(Config.Upgrade.BonusPerLevel * 100) .. "% Strength for each level.")
-	local soonInfo, soonBuy = offerCard(upgrades.Content, UDim2.new(0.5, 10, 0, 0), "Teal", "🔧", "MORE UPGRADES", "New upgrades are on the way!")
-	soonInfo.Text = "Stay tuned!"
-	soonBuy.Label.Text = "SOON"
-	soonBuy.SetStyle("Grey")
-	soonBuy.Button.Activated:Connect(comingSoon)
-	upBuy.Button.Activated:Connect(function()
-		local cost = UI.state and UI.state.UpgradeCost or Config.UpgradeCost(0)
-		if UI.state and UI.state.Coins >= cost then
-			BuyUpgrade:FireServer()
-		else
-			toast("Not enough coins!")
+	local ROW_HEIGHT = 78
+	local upgrades = makeWindow("Upgrades", "UPGRADES", "⚡", 760, 120 + #Config.Upgrades * (ROW_HEIGHT + 10))
+	local rows = {}
+
+	-- "+5%" ou "+1.5 studs"
+	local function bonusText(upgrade, level)
+		local value = upgrade.PerLevel * level
+		if upgrade.Unit == "%" then
+			value *= 100
 		end
-	end)
+		return "+" .. (string.format("%.1f", value):gsub("%.0$", "")) .. upgrade.Unit
+	end
+
+	for index, upgrade in Config.Upgrades do
+		local row = make("Frame", {
+			Position = UDim2.new(0, 0, 0, (index - 1) * (ROW_HEIGHT + 10)),
+			Size = UDim2.new(1, 0, 0, ROW_HEIGHT),
+			BackgroundColor3 = Theme.PanelLight,
+		}, upgrades.Content)
+		round(row, 14)
+		border(row, 3)
+		local title = label(row, {
+			Position = UDim2.new(0, 12, 0, 6),
+			Size = UDim2.new(1, -230, 0, 30),
+			Text = "",
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Font = TITLE_FONT,
+		}, 2)
+		-- la barre de niveau (0/40)
+		local barBack = make("Frame", {
+			Position = UDim2.new(0, 12, 0, 42),
+			Size = UDim2.new(1, -230, 0, 26),
+			BackgroundColor3 = Theme.PanelDark,
+		}, row)
+		round(barBack, 8)
+		border(barBack, 2)
+		local barFill = make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = ButtonStyles.Teal[2] }, barBack)
+		round(barFill, 8)
+		local barText = label(barBack, { Size = UDim2.fromScale(1, 1), Text = "0/" .. upgrade.MaxLevel, ZIndex = 2 }, 2)
+		-- le prix et le bouton
+		local price = label(row, {
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -12, 0, 4),
+			Size = UDim2.new(0, 196, 0, 28),
+			Text = "",
+			TextColor3 = Theme.Gold,
+		}, 2)
+		local buy = fancyButton(row, "Gold", "Upgrade", {
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(1, -12, 1, -6),
+			Size = UDim2.new(0, 196, 0, 40),
+		})
+		buy.Button.Activated:Connect(function()
+			if not UI.state then
+				return
+			end
+			local level = UI.state.Upgrades and UI.state.Upgrades[upgrade.Id] or 0
+			if level >= upgrade.MaxLevel then
+				toast("Max level!")
+			elseif (UI.state.Diamonds or 0) < Config.UpgradeCost(upgrade.Id, level) then
+				toast("Not enough 💎! Collect dumbbells to get more.")
+			else
+				BuyUpgrade:FireServer(upgrade.Id)
+			end
+		end)
+		rows[upgrade.Id] = { Title = title, Fill = barFill, BarText = barText, Price = price, Buy = buy }
+	end
+
+	label(upgrades.Content, {
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, 0),
+		Size = UDim2.new(1, 0, 0, 24),
+		Text = "💎 Collect dumbbells in the lobby to earn diamonds!",
+		TextColor3 = Theme.SubText,
+	}, 1.5)
 
 	upgrades.Refresh = function()
-		local level = UI.state and UI.state.UpgradeLevel or 0
-		local cost = UI.state and UI.state.UpgradeCost or Config.UpgradeCost(0)
-		upInfo.Text = string.format("Level %d  •  Now x%.1f", level, 1 + level * Config.Upgrade.BonusPerLevel)
-		upBuy.Label.Text = "💰 " .. formatNumber(cost)
-		upBuy.SetStyle(UI.state and UI.state.Coins >= cost and "Green" or "Grey")
+		local diamonds = UI.state and UI.state.Diamonds or 0
+		for _, upgrade in Config.Upgrades do
+			local row = rows[upgrade.Id]
+			local level = UI.state and UI.state.Upgrades and UI.state.Upgrades[upgrade.Id] or 0
+			row.Title.Text = string.format("%s %s: %s [%s/Level]", upgrade.Icon, upgrade.Name, bonusText(upgrade, level), bonusText(upgrade, 1))
+			row.Fill.Size = UDim2.fromScale(level / upgrade.MaxLevel, 1)
+			row.BarText.Text = level .. "/" .. upgrade.MaxLevel
+			if level >= upgrade.MaxLevel then
+				row.Price.Text = "MAX"
+				row.Buy.Label.Text = "MAX"
+				row.Buy.SetStyle("Grey")
+			else
+				local cost = Config.UpgradeCost(upgrade.Id, level)
+				row.Price.Text = "💎 " .. formatNumber(cost)
+				row.Buy.Label.Text = "Upgrade"
+				row.Buy.SetStyle(diamonds >= cost and "Gold" or "Grey")
+			end
+		end
+	end
+end
+
+-- DIMENSIONS (le portail du lobby) : débloquer une dimension avec des pièces 💰, puis y jouer
+do
+	local CARD_HEIGHT = 96
+	local dimensionsWindow = makeWindow("Dimensions", "DIMENSIONS", "🌀", 620, 130 + #Config.Dimensions * (CARD_HEIGHT + 12))
+	local ChooseDimension = remotes:WaitForChild("ChooseDimension")
+	local cards = {}
+	for index, dimension in Config.Dimensions do
+		local card = make("Frame", {
+			Position = UDim2.new(0, 0, 0, (index - 1) * (CARD_HEIGHT + 12)),
+			Size = UDim2.new(1, 0, 0, CARD_HEIGHT),
+			BackgroundColor3 = Theme.PanelLight,
+		}, dimensionsWindow.Content)
+		round(card, 16)
+		local stroke = border(card, 3)
+		label(card, {
+			Position = UDim2.new(0, 16, 0, 10),
+			Size = UDim2.new(1, -230, 0, 38),
+			Text = "🌀 " .. dimension.Name,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Font = TITLE_FONT,
+		}, 2.5)
+		label(card, {
+			Position = UDim2.new(0, 16, 0, 54),
+			Size = UDim2.new(1, -230, 0, 28),
+			Text = (dimension.Start == 0 and "START" or formatNumber(dimension.Start)) .. " → " .. formatNumber(dimension.Finish) .. " studs",
+			TextColor3 = Theme.SubText,
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}, 1.5)
+		local button = fancyButton(card, "Green", "", {
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -14, 0.5, 0),
+			Size = UDim2.new(0, 196, 0, 62),
+		})
+		button.Button.Activated:Connect(function()
+			if not UI.state then
+				return
+			end
+			local unlocked = UI.state.UnlockedDimensions and UI.state.UnlockedDimensions[dimension.Id]
+			if UI.state.Dimension == dimension.Id then
+				toast("You are already here!")
+			elseif not unlocked and UI.state.Coins < dimension.Cost then
+				toast("Not enough coins!")
+			else
+				ChooseDimension:FireServer(dimension.Id)
+			end
+		end)
+		cards[dimension.Id] = { Button = button, Stroke = stroke }
+	end
+	label(dimensionsWindow.Content, {
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, 0),
+		Size = UDim2.new(1, 0, 0, 24),
+		Text = "The stronger you are, the farther you go!",
+		TextColor3 = Theme.SubText,
+	}, 1.5)
+
+	dimensionsWindow.Refresh = function()
+		for _, dimension in Config.Dimensions do
+			local card = cards[dimension.Id]
+			local unlocked = UI.state and UI.state.UnlockedDimensions and UI.state.UnlockedDimensions[dimension.Id]
+			local here = UI.state and UI.state.Dimension == dimension.Id
+			card.Stroke.Color = here and Theme.Gold or OUTLINE
+			if here then
+				card.Button.Label.Text = "✔ HERE"
+				card.Button.SetStyle("Grey")
+			elseif unlocked then
+				card.Button.Label.Text = "GO!"
+				card.Button.SetStyle("Green")
+			else
+				card.Button.Label.Text = "💰 " .. formatNumber(dimension.Cost)
+				card.Button.SetStyle(UI.state and UI.state.Coins >= dimension.Cost and "Gold" or "Grey")
+			end
+		end
 	end
 end
 
@@ -624,8 +774,8 @@ do
 	end
 end
 
--- TRAIT MASTER : donner ou changer le trait d'un pet, avec des Rerolls 💎 ----------
--- (les Rerolls se gagnent en jouant : lancers lointains et haltères magiques)
+-- TRAIT MASTER : donner ou changer le trait d'un pet, avec des diamants 💎 ----------
+-- (les diamants se gagnent seulement avec les haltères)
 
 do
 	local traits = makeWindow("Traits", "TRAIT MASTER", "🔮", 920, 580)
@@ -637,11 +787,11 @@ do
 	local rerollPill = make("Frame", { Size = UDim2.new(0, 190, 0, 42), BackgroundColor3 = Theme.PanelDark }, content)
 	round(rerollPill, 21)
 	border(rerollPill, 3, ButtonStyles.Teal[2])
-	local rerollText = label(rerollPill, { Size = UDim2.new(1, -20, 0.7, 0), Position = UDim2.new(0, 10, 0.15, 0), Text = "💎 0 Rerolls" }, 2)
+	local rerollText = label(rerollPill, { Size = UDim2.new(1, -20, 0.7, 0), Position = UDim2.new(0, 10, 0.15, 0), Text = "💎 0" }, 2)
 	local hint = label(content, {
 		Position = UDim2.new(0, 205, 0, 4),
 		Size = UDim2.new(1, -205, 0, 34),
-		Text = "Pick a pet, then give it a random trait! Earn 💎 by launching eggs far.",
+		Text = "Pick a pet, then give it a random trait! Collect dumbbells to earn 💎.",
 		TextColor3 = Theme.SubText,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	}, 1.5)
@@ -673,7 +823,7 @@ do
 		local key = view.Selected
 		local owned = key and UI.state and UI.state.PetCounts and UI.state.PetCounts[key] or 0
 		details.Visible = owned > 0
-		rerollText.Text = string.format("💎 %d Rerolls", UI.state and UI.state.Rerolls or 0)
+		rerollText.Text = "💎 " .. formatNumber(UI.state and UI.state.Diamonds or 0)
 		if owned == 0 then
 			return
 		end
@@ -687,7 +837,7 @@ do
 		nameText.Text = petName
 		trait.Show(traitId, tier)
 		rollButton.Label.Text = (traitId and "REROLL" or "ADD TRAIT") .. "  💎 " .. cost(key)
-		rollButton.SetStyle((UI.state.Rerolls or 0) >= cost(key) and "Teal" or "Grey")
+		rollButton.SetStyle((UI.state.Diamonds or 0) >= cost(key) and "Teal" or "Grey")
 	end
 
 	rollButton.Button.Activated:Connect(function()
@@ -695,8 +845,8 @@ do
 		if busy or not key or not UI.state then
 			return
 		end
-		if (UI.state.Rerolls or 0) < cost(key) then
-			toast("Not enough Rerolls! Launch eggs far to earn more 💎")
+		if (UI.state.Diamonds or 0) < cost(key) then
+			toast("Not enough 💎! Collect dumbbells to get more.")
 			return
 		end
 		busy = true

@@ -68,9 +68,9 @@ RedeemCode.OnServerInvoke = function(player, text)
 			table.insert(gifts, string.format("%dx %s Potion", count, potion.Name))
 		end
 	end
-	if (tonumber(reward.Rerolls) or 0) > 0 then
-		data.Rerolls += reward.Rerolls
-		table.insert(gifts, "+" .. reward.Rerolls .. " 💎")
+	if (tonumber(reward.Diamonds) or 0) > 0 then
+		data.Diamonds += reward.Diamonds
+		table.insert(gifts, "+" .. reward.Diamonds .. " 💎")
 	end
 	if (tonumber(reward.Coins) or 0) > 0 then
 		data.Coins += reward.Coins

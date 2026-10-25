@@ -42,18 +42,50 @@ for _, prompt in CollectionService:GetTagged("ReturnPrompt") do
 	end)
 end
 
--- Le portail WORLD 2 du lobby : ouvert seulement si on a débloqué le monde 2
+-- Le portail du lobby : il ouvre la fenêtre des DIMENSIONS (on en débloque une avec des pièces, puis on y joue)
+local OpenDimensions, ChooseDimension = Remotes.OpenDimensions, Remotes.ChooseDimension
+local Duo = require(script.Parent.Duo)
 for _, prompt in CollectionService:GetTagged("World2Prompt") do
+	prompt.ActionText = "Dimensions"
 	prompt.Triggered:Connect(function(player)
-		local data = playerData[player]
-		if data and data.World2Unlocked then
-			if player.Character then
-				player.Character:PivotTo(CFrame.new(WORLD2_SPOT + Vector3.new(0, 4, 10)))
-			end
-		else
-			ShowMessage:FireClient(player, "🔒 Launch your egg into the portal at the end of the track!")
-		end
+		OpenDimensions:FireClient(player)
 	end)
 end
+
+ChooseDimension.OnServerEvent:Connect(function(player, dimensionId)
+	local data = playerData[player]
+	if not data or data.Busy or typeof(dimensionId) ~= "number" then
+		return
+	end
+	local dimension = nil
+	for _, candidate in Config.Dimensions do
+		if candidate.Id == dimensionId then
+			dimension = candidate
+		end
+	end
+	if not dimension then
+		return
+	end
+	if not data.UnlockedDimensions[dimension.Id] then
+		-- il faut d'abord la débloquer avec des pièces (et avoir débloqué celle d'avant)
+		local previous = Config.Dimensions[table.find(Config.Dimensions, dimension) - 1]
+		if previous and not data.UnlockedDimensions[previous.Id] then
+			ShowMessage:FireClient(player, "🔒 Unlock " .. previous.Name .. " first!")
+			return
+		end
+		if data.Coins < dimension.Cost then
+			ShowMessage:FireClient(player, "Not enough coins!")
+			return
+		end
+		data.Coins -= dimension.Cost
+		data.UnlockedDimensions[dimension.Id] = true
+		ShowMessage:FireClient(player, "🌀 " .. dimension.Name .. " UNLOCKED!")
+	end
+	if data.Dimension ~= dimension.Id then
+		Duo.Break(player, player.DisplayName .. " changed dimension") -- un duo joue dans une seule dimension
+	end
+	data.Dimension = dimension.Id
+	sendState(player)
+end)
 
 return {}

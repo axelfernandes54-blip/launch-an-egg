@@ -1,5 +1,5 @@
 -- Dumbbells (ModuleScript dans ServerScriptService > Server)
--- Les haltères à ramasser dans le lobby (elles donnent de la Force 💪, ou un Reroll 💎 pour la magique).
+-- Les haltères à ramasser dans le lobby (elles donnent de la Force 💪 et des diamants 💎, le seul moyen d'en gagner).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -153,7 +153,7 @@ local function buildDumbbell(kind)
 	model:SetAttribute("Value", kind.Value)
 	model:SetAttribute("Color", kind.Color)
 	model:SetAttribute("Size", s)
-	model:SetAttribute("Reroll", kind.Reroll or 0)
+	model:SetAttribute("Diamonds", kind.Diamonds or 0)
 	return model
 end
 
@@ -168,8 +168,9 @@ local function collectDumbbell(model, player)
 	if not (data and root) then
 		return
 	end
-	-- On vérifie que le joueur est vraiment à côté (anti-triche)
-	if (root.Position - model:GetPivot().Position).Magnitude > 12 + model:GetAttribute("Size") * 3 then
+	-- On vérifie que le joueur est vraiment à côté (anti-triche), en comptant l'upgrade Magnet Range
+	local magnet = Config.UpgradeBonus("Magnet", data.Upgrades.Magnet)
+	if (root.Position - model:GetPivot().Position).Magnitude > 12 + model:GetAttribute("Size") * 3 + magnet then
 		return
 	end
 	model:SetAttribute("Collected", true)
@@ -182,15 +183,13 @@ local function collectDumbbell(model, player)
 	if data.BoostTime > 0 then
 		value *= Config.PotionMultiplier -- une potion est active : encore x2
 	end
-	local rerolls = model:GetAttribute("Reroll") or 0
-	if rerolls > 0 then
-		value = 0 -- l'haltère magique donne un Reroll 📜 au lieu de la Force
-		data.Rerolls += rerolls
-	end
+	-- les diamants 💎 : on ne les gagne qu'avec les haltères
+	local diamonds = model:GetAttribute("Diamonds") or 0
+	data.Diamonds += diamonds
 	data.Strength += value
 	sendState(player)
 	-- Tous les joueurs voient l'animation ; celui qui ramasse voit aussi "💪 +X"
-	DumbbellCollected:FireAllClients(player, model, value, { Base = base, Pets = petBonus, X2 = data.HasX2, Rerolls = rerolls })
+	DumbbellCollected:FireAllClients(player, model, value, { Base = base, Pets = petBonus, X2 = data.HasX2, Diamonds = diamonds })
 	task.delay(0.6, function()
 		model:Destroy()
 	end)
@@ -218,5 +217,25 @@ end
 for _ = 1, Config.DumbbellCount do
 	spawnDumbbell()
 end
+
+-- L'upgrade Magnet Range : les haltères proches sont ramassées sans les toucher
+task.spawn(function()
+	while true do
+		task.wait(0.25)
+		for player, data in playerData do
+			local magnet = Config.UpgradeBonus("Magnet", data.Upgrades.Magnet)
+			local root = magnet > 0 and player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if root then
+				for _, model in dumbbellFolder:GetChildren() do
+					local size = model:GetAttribute("Size") or 1
+					-- portée normale (la zone qu'on touche) + la portée de l'aimant
+					if not model:GetAttribute("Collected") and (root.Position - model:GetPivot().Position).Magnitude <= 2 * size + 3 + magnet then
+						collectDumbbell(model, player)
+					end
+				end
+			end
+		end
+	end
+end)
 
 return {}

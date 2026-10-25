@@ -91,6 +91,10 @@ DuoInvite.OnServerEvent:Connect(function(player, target)
 	if distanceBetween(player, target) > Config.DuoKick.InviteDistance then
 		return
 	end
+	if data.Dimension ~= targetData.Dimension then
+		ShowMessage:FireClient(player, "You must be in the same dimension!")
+		return
+	end
 	lastInvite[player] = now
 	invites[target] = { From = player, Time = now }
 	DuoInvited:FireClient(target, player)

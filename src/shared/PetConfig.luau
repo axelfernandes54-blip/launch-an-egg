@@ -54,16 +54,26 @@ Config.TraitTiers = {
 
 Config.TraitMasterPosition = Vector3.new(-98, 0, -22) -- où se trouve le Trait Master dans le lobby
 
--- Le prix (en Rerolls 📜) pour donner / changer le trait d'un pet, selon la rareté du pet
-Config.RerollCost = { Commune = 1, Rare = 1, Epique = 2, Legendaire = 3, Mythique = 5 }
+-- Le prix (en diamants 💎) pour donner / changer le trait d'un pet, selon la rareté du pet
+Config.RerollCost = { Commune = 5, Rare = 5, Epique = 10, Legendaire = 15, Mythique = 25 }
 
--- Chance (sur 100) de gagner 1 Reroll 📜 à chaque lancer, selon la zone où l'œuf tombe
-Config.RerollDrops = { Commune = 5, Rare = 10, Epique = 20, Legendaire = 40, Mythique = 100 }
+-- Les anciens Rerolls deviennent des diamants : 1 Reroll = 5 diamants
+Config.DiamondsPerOldReroll = 5
 
 Config.WorldName = "PIRATE SEAS" -- le nom du monde 1 (affiché en haut de l'écran)
 
+-- Les DIMENSIONS : chaque dimension a la même piste (même taille), mais des distances affichées plus grandes.
+-- Start / Finish : les distances affichées au début et au bout de la piste. Cost : prix en pièces 💰 pour la débloquer.
+-- Name : ce que voient les joueurs (anglais). Pour ajouter une dimension : copie une ligne.
+Config.Dimensions = {
+	{ Id = 1, Name = "DIMENSION 1", Start = 0,     Finish = 10000,  Cost = 0 },
+	{ Id = 2, Name = "DIMENSION 2", Start = 10000, Finish = 100000, Cost = 1000000 },
+}
+Config.TrackLength = 1800 -- la longueur réelle de la piste (en studs), la même dans chaque dimension
+
 -- Les parties de la piste (de simples ambiances : elles ne garantissent AUCUNE rareté).
--- Start / Finish : en studs. Name : le nom affiché (anglais). Color : sa couleur sur la barre du haut.
+-- Start / Finish : en studs RÉELS sur la piste (0 à TrackLength), pareil dans chaque dimension.
+-- Name : le nom affiché (anglais). Color : sa couleur sur la barre du haut.
 Config.Zones = {
 	{ Rarity = "Commune",    Name = "Beach",           Start = 0,    Finish = 100,  Color = Color3.fromRGB(240, 205, 120) },
 	{ Rarity = "Rare",       Name = "Port",            Start = 100,  Finish = 300,  Color = Color3.fromRGB(185, 120, 65) },
@@ -72,7 +82,7 @@ Config.Zones = {
 	{ Rarity = "Mythique",   Name = "Kraken Sea",      Start = 1000, Finish = 1800, Color = Color3.fromRGB(40, 130, 175) },
 }
 
--- Les chances d'obtenir chaque rareté, selon la distance (en studs).
+-- Les chances d'obtenir chaque rareté, selon l'endroit où l'œuf tombe sur la piste (en studs réels).
 -- Entre deux lignes, les chances changent doucement. Chaque ligne fait 100 %.
 -- Même tout près, on a une toute petite chance d'avoir un Mythic !
 Config.DropChances = {
@@ -118,16 +128,17 @@ Config.Animations = {
 	Climb = "",  -- en grimpant
 }
 
--- Les haltères à ramasser dans le lobby : chacune donne des points de Force (💪).
--- Value : points gagnés. Chance : plus le nombre est grand, plus on en trouve souvent.
+-- Les haltères à ramasser dans le lobby : chacune donne des points de Force (💪) et des diamants (💎).
+-- Les haltères sont le SEUL moyen de gagner des diamants.
+-- Value : points de Force. Diamonds : diamants gagnés. Chance : plus le nombre est grand, plus on en trouve souvent.
 -- Size : taille de l'haltère. Color : couleur des disques. Glow : brille dans le noir.
 Config.Dumbbells = {
-	{ Name = "Petite",  Value = 1,  Chance = 50, Size = 1,   Color = Color3.fromRGB(90, 210, 90) },
-	{ Name = "Moyenne", Value = 3,  Chance = 30, Size = 1.4, Color = Color3.fromRGB(60, 140, 255) },
-	{ Name = "Grande",  Value = 10, Chance = 15, Size = 1.9, Color = Color3.fromRGB(170, 70, 255) },
-	{ Name = "Géante",  Value = 25, Chance = 5,  Size = 2.6, Color = Color3.fromRGB(255, 190, 30), Glow = true },
-	-- l'haltère magique (rare) : elle donne 1 Reroll 📜 au lieu de la Force
-	{ Name = "Magique", Value = 0, Reroll = 1, Chance = 2, Size = 1.5, Color = Color3.fromRGB(80, 230, 220), Glow = true },
+	{ Name = "Petite",  Value = 1,  Diamonds = 1,  Chance = 50, Size = 1,   Color = Color3.fromRGB(90, 210, 90) },
+	{ Name = "Moyenne", Value = 3,  Diamonds = 2,  Chance = 30, Size = 1.4, Color = Color3.fromRGB(60, 140, 255) },
+	{ Name = "Grande",  Value = 10, Diamonds = 5,  Chance = 15, Size = 1.9, Color = Color3.fromRGB(170, 70, 255) },
+	{ Name = "Géante",  Value = 25, Diamonds = 10, Chance = 5,  Size = 2.6, Color = Color3.fromRGB(255, 190, 30), Glow = true },
+	-- l'haltère magique (rare) : beaucoup de diamants, mais pas de Force
+	{ Name = "Magique", Value = 0,  Diamonds = 25, Chance = 2,  Size = 1.5, Color = Color3.fromRGB(80, 230, 220), Glow = true },
 }
 Config.DumbbellCount = 40       -- nombre d'haltères dans le lobby en même temps
 -- Le pass "x2 Force" (double la Force des haltères). Mets ici le numéro (ID) de ton pass
@@ -148,7 +159,7 @@ Config.PotionMultiplier = 2 -- x2 Force des haltères pendant la potion
 
 -- Les CODES (le coffre "CODES" du lobby). Chaque joueur peut utiliser chaque code UNE seule fois.
 -- Pour ajouter un code : copie une ligne, change le nom (en MAJUSCULES) et la récompense.
--- Récompenses possibles : Potion5 / Potion10 / Potion20 = nombre de potions, Rerolls = 💎, Coins = 💰
+-- Récompenses possibles : Potion5 / Potion10 / Potion20 = nombre de potions, Diamonds = 💎, Coins = 💰
 Config.Codes = {
 	["AHOY"]   = { Potion5 = 1 },
 	["PIRATE"] = { Potion10 = 1 },
@@ -175,24 +186,75 @@ end
 Config.BaseForce = 100          -- la Force de départ (💪) ; chaque point d'haltère ajoute +1 Force
                                 -- le coup de pied utilise exactement cette Force (x la jauge)
 
--- Amélioration "Force +" achetée avec les pièces.
 -- La progression : tous les réglages de vitesse du jeu sont ici ----------------
--- Distance d'un lancer = BaseDistance x (Force du coup de pied / BaseForce) puissance Exponent
---   BaseDistance : la distance d'un nouveau joueur, jauge pleine (en studs)
+-- Distance d'un lancer (la distance AFFICHÉE, toutes dimensions) = BaseDistance x (Force du coup de pied / BaseForce) puissance Exponent
+--   BaseDistance : la distance d'un nouveau joueur, jauge pleine
 --   Exponent : plus il est petit, plus la progression ralentit quand on devient fort
 --     (0.55 : quand la Force double, la distance est multipliée par environ 1,5)
+--   Avec 611 : 10K (bout de la Dimension 1) vers 16 000 de Force, 100K (bout de la Dimension 2) vers 1 million.
 -- Le trait 🚀 Distance des pets multiplie ensuite la distance.
 Config.Progression = {
-	BaseDistance = 110,
+	BaseDistance = 611,
 	Exponent = 0.55,
 }
 
--- Amélioration "Power Up" achetée avec les pièces.
-Config.Upgrade = {
-	BonusPerLevel = 0.10, -- +10 % de force par niveau
-	BaseCost = 50,        -- prix du niveau 1
-	CostGrowth = 1.9,     -- chaque niveau coûte 1,9 fois plus cher
+-- Les UPGRADES, achetées avec les diamants 💎 (fenêtre ⚡ UPGRADES).
+-- PerLevel : ce que gagne chaque niveau. MaxLevel : le niveau maximum.
+-- BaseCost : prix du niveau 1 (en 💎). CostGrowth : chaque niveau coûte autant de fois plus cher.
+-- Name, Icon, Unit : ce qu'on voit (anglais), ex. "Pet Luck: +5% [+2.5%/Level]".
+-- Id : le nom interne (ne pas changer). Pour ajouter une upgrade : une ligne ici + son effet dans PlayerData.
+Config.Upgrades = {
+	{ Id = "Power",   Name = "Kick Power",        Icon = "💪", PerLevel = 0.10, Unit = "%", MaxLevel = 40, BaseCost = 10, CostGrowth = 1.18 },
+	{ Id = "Magnet",  Name = "Magnet Range",      Icon = "🧲", PerLevel = 0.5,  Unit = " studs", MaxLevel = 40, BaseCost = 10, CostGrowth = 1.15 },
+	{ Id = "Luck",    Name = "Pet Luck",          Icon = "🍀", PerLevel = 0.025, Unit = "%", MaxLevel = 40, BaseCost = 15, CostGrowth = 1.18 },
+	{ Id = "Coins",   Name = "Coin Bonus",        Icon = "💰", PerLevel = 0.05, Unit = "%", MaxLevel = 40, BaseCost = 10, CostGrowth = 1.16 },
+	{ Id = "Lifting", Name = "Dumbbell Strength", Icon = "🏋️", PerLevel = 0.025, Unit = "%", MaxLevel = 40, BaseCost = 10, CostGrowth = 1.16 },
 }
+
+function Config.GetUpgrade(id)
+	for _, upgrade in Config.Upgrades do
+		if upgrade.Id == id then
+			return upgrade
+		end
+	end
+	return nil
+end
+
+-- Le prix (en 💎) pour passer du niveau "level" au suivant
+function Config.UpgradeCost(id, level)
+	local upgrade = Config.GetUpgrade(id)
+	return math.floor(upgrade.BaseCost * upgrade.CostGrowth ^ level)
+end
+
+-- Le bonus d'une upgrade à ce niveau (ex. Power niveau 3 = 0.30 = +30 %)
+function Config.UpgradeBonus(id, level)
+	local upgrade = Config.GetUpgrade(id)
+	return upgrade and upgrade.PerLevel * (level or 0) or 0
+end
+
+-- Les dimensions : distance réelle sur la piste <-> distance affichée -----------
+function Config.GetDimension(id)
+	for _, dimension in Config.Dimensions do
+		if dimension.Id == id then
+			return dimension
+		end
+	end
+	return Config.Dimensions[1]
+end
+
+-- Où est-on sur la piste (studs réels) -> la distance affichée dans cette dimension
+function Config.ToDisplayDistance(trackDistance, dimensionId)
+	local dimension = Config.GetDimension(dimensionId)
+	local t = math.clamp(trackDistance / Config.TrackLength, 0, 1)
+	return math.floor(dimension.Start + t * (dimension.Finish - dimension.Start))
+end
+
+-- La distance affichée -> où l'œuf tombe sur la piste de cette dimension (studs réels)
+function Config.ToTrackDistance(displayDistance, dimensionId)
+	local dimension = Config.GetDimension(dimensionId)
+	local t = math.clamp((displayDistance - dimension.Start) / (dimension.Finish - dimension.Start), 0, 1)
+	return t * Config.TrackLength
+end
 
 -- Les pièces : seuls les pets ÉQUIPÉS rapportent des pièces chaque seconde (CoinsPerSecond de leur rareté).
 
@@ -353,14 +415,10 @@ function Config.PetScore(key)
 	return pet.RarityIndex * 100 + (tier or 0) * 10 + (trait == "Strength" and 5 or 0)
 end
 
--- La distance (en studs) d'un coup de pied avec cette Force (voir Config.Progression)
+-- La distance (affichée) d'un coup de pied avec cette Force (voir Config.Progression)
 function Config.DistanceForForce(force)
 	local settings = Config.Progression
 	return settings.BaseDistance * (math.max(force, 1) / Config.BaseForce) ^ settings.Exponent
-end
-
-function Config.UpgradeCost(level)
-	return math.floor(Config.Upgrade.BaseCost * Config.Upgrade.CostGrowth ^ level)
 end
 
 return Config

@@ -37,7 +37,7 @@ local ShowMessage = remotes:WaitForChild("ShowMessage")
 local UsePotion = remotes:WaitForChild("UsePotion")
 local OpenCodes = remotes:WaitForChild("OpenCodes")
 local RedeemCode = remotes:WaitForChild("RedeemCode")
-local CRYSTAL_IMAGE = "rbxassetid://135650434228824" -- l'icône du cristal (la monnaie Rerolls)
+local CRYSTAL_IMAGE = "rbxassetid://135650434228824" -- l'icône du cristal (la monnaie 💎 diamants)
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -561,7 +561,7 @@ local function petsSignature()
 		table.insert(parts, key .. "=" .. count)
 	end
 	table.sort(parts)
-	return table.concat(parts, ",") .. "|" .. table.concat(UI.state.Equipped or {}, ",") .. "|" .. tostring(UI.state.Rerolls)
+	return table.concat(parts, ",") .. "|" .. table.concat(UI.state.Equipped or {}, ",") .. "|" .. tostring(UI.state.Diamonds)
 end
 
 -- Tout ce qui est au-dessus est partagé avec les autres modules

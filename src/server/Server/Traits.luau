@@ -1,5 +1,5 @@
 -- Traits (ModuleScript dans ServerScriptService > Server)
--- Le Trait Master : donner / changer le trait d'un pet contre des Rerolls (💎).
+-- Le Trait Master : donner / changer le trait d'un pet contre des diamants (💎).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,7 +27,7 @@ for _, prompt in CollectionService:GetTagged("TraitMasterPrompt") do
 	end)
 end
 
--- Donner / changer le trait d'un pet chez le Trait Master (payé en pièces du jeu, jamais en Robux)
+-- Donner / changer le trait d'un pet chez le Trait Master (payé en diamants 💎, jamais en Robux)
 RerollTrait.OnServerEvent:Connect(function(player, key)
 	local data = playerData[player]
 	if not data or typeof(key) ~= "string" then
@@ -49,10 +49,10 @@ RerollTrait.OnServerEvent:Connect(function(player, key)
 		return
 	end
 	local cost = Config.RerollCost[target.Rarity] or 1
-	if data.Rerolls < cost then
+	if data.Diamonds < cost then
 		return
 	end
-	data.Rerolls -= cost
+	data.Diamonds -= cost
 	target.Trait, target.Tier = Config.RollTrait()
 	local newKey = petKey(target)
 	-- si ce pet était équipé, l'équipement suit son nouveau trait
@@ -66,7 +66,7 @@ RerollTrait.OnServerEvent:Connect(function(player, key)
 	TraitRerolled:FireClient(player, key, newKey)
 end)
 
--- Outil de test (seulement dans Studio) : chaque joueur reçoit 5 Rerolls 📜 en arrivant,
+-- Outil de test (seulement dans Studio) : chaque joueur a au moins 25 diamants 💎 en arrivant,
 -- pour essayer le Trait Master. Dans le vrai jeu (publié), ça ne fait rien.
 if game:GetService("RunService"):IsStudio() then
 	task.spawn(function()
@@ -75,7 +75,7 @@ if game:GetService("RunService"):IsStudio() then
 			for player, data in playerData do
 				if not data.TestRerollsGiven then
 					data.TestRerollsGiven = true
-					data.Rerolls = math.max(data.Rerolls, 5)
+					data.Diamonds = math.max(data.Diamonds, 25)
 					sendState(player)
 				end
 			end

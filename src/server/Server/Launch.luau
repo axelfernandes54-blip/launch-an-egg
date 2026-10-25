@@ -1,5 +1,6 @@
 -- Launch (ModuleScript dans ServerScriptService > Server)
--- Le lancer d'œuf : coup de pied, vol, apparence de l'œuf selon la zone, atterrissage, pet gagné, portail du World 2.
+-- Le lancer d'œuf (seul ou à deux) : coup de pied, vol, apparence de l'œuf selon la zone, atterrissage, pet gagné.
+-- La distance affichée dépend de la dimension du joueur (voir Config.Dimensions) ; la piste est la même partout.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -346,9 +347,12 @@ local function runLaunch(kickers)
 	end
 	launchBonus /= #valid
 	center /= #valid
-	-- la distance voulue (voir Config.Progression, + le trait "Distance" des pets),
+	-- la distance voulue (voir Config.Progression, + le trait "Distance" des pets), en distance affichée,
+	-- puis l'endroit où l'œuf doit tomber sur la piste de la dimension du joueur (studs réels),
 	-- puis la vitesse qu'il faut donner à l'œuf pour l'atteindre
-	local targetDistance = Config.DistanceForForce(kickForce) * launchBonus
+	local dimension = valid[1].Data.Dimension -- en duo, les deux joueurs sont dans la même dimension
+	local wantedDistance = Config.DistanceForForce(kickForce) * launchBonus
+	local targetDistance = math.max(6, Config.ToTrackDistance(wantedDistance, dimension))
 	targetDistance += math.max(0, -(center.X + 3.5)) -- l'œuf part de la plateforme, avant la ligne de départ (x = 0)
 	local speed = math.sqrt(targetDistance * workspace.Gravity / math.sin(2 * math.rad(launch.Angle)))
 
@@ -436,19 +440,21 @@ local function runLaunch(kickers)
 		end
 	end
 
-	local distance = math.max(0, math.floor(egg.Position.X - LAUNCH_POINT.X))
+	-- où l'œuf est tombé sur la piste (studs réels), et la distance affichée dans la dimension
+	local trackDistance = math.max(0, egg.Position.X - LAUNCH_POINT.X)
 	if reachedPortal then
-		distance = Config.Zones[#Config.Zones].Finish -- le bout de la piste
+		trackDistance = Config.TrackLength -- le bout de la piste : la distance maximum de la dimension
 	end
-	local zone = Config.GetZoneForDistance(distance)
+	local distance = Config.ToDisplayDistance(trackDistance, dimension)
+	local zone = Config.GetZoneForDistance(trackDistance)
 
 	-- Chaque tireur tire son propre pet : aucune rareté garantie,
-	-- plus l'œuf va loin, meilleures sont les chances (+ le Luck des traits de ses pets)
+	-- plus l'œuf va loin sur la piste, meilleures sont les chances (+ le Luck des pets et de l'upgrade Pet Luck)
 	for i, kicker in valid do
 		local player = kicker.Player
 		local data = playerData[player]
 		if data then -- (le joueur est peut-être parti pendant le vol)
-			local chances = Config.GetChances(distance, getBonuses(data).Luck)
+			local chances = Config.GetChances(trackDistance, getBonuses(data).Luck)
 			local rarityId = Config.RollRarity(chances)
 			local petName = Config.RandomPet(rarityId)
 			if i == 1 and not reachedPortal then
@@ -466,15 +472,7 @@ local function runLaunch(kickers)
 			if isDuo then
 				data.DuoKicks += 1
 			end
-			if reachedPortal and not data.World2Unlocked then
-				data.World2Unlocked = true -- sauvegardé pour toujours
-				World2Unlocked:FireClient(player)
-			end
-			-- parfois, on gagne aussi 1 Reroll 📜 (plus l'œuf va loin, plus c'est probable)
-			local gotReroll = math.random(1, 100) <= (Config.RerollDrops[zone.Rarity] or 0)
-			if gotReroll then
-				data.Rerolls += 1
-			end
+			-- (toucher le portail du bout de la piste ne débloque plus rien : les dimensions s'achètent avec des pièces)
 
 			EggLanded:FireClient(player, {
 				Distance = distance,
@@ -482,7 +480,7 @@ local function runLaunch(kickers)
 				Rarity = rarityId,
 				PetName = petName,
 				KickForce = kickForce,
-				GotReroll = gotReroll,
+				GotReroll = false, -- (les lancers ne donnent plus de Rerolls : les diamants viennent des haltères)
 				Chance = chances[rarityId], -- la chance (en %) qu'on avait d'avoir cette rareté
 				Duo = isDuo,
 			})
