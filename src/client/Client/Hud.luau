@@ -165,25 +165,50 @@ local coinRate = label(rightColumn, {
 local autoButton = fancyButton(rightColumn, "Red", "AUTO LAUNCH", { Position = UDim2.new(0, 0, 0, 228), Size = UDim2.new(1, 0, 0, 58) })
 autoButton.Button.Activated:Connect(comingSoon)
 
--- En bas au centre : la barre de grosses icônes (Pets, Shop, Upgrades, Index, Trade, Settings) ------
+-- En bas au centre : le bouton Menu (4 carrés de couleur). Il ouvre un petit panneau avec
+-- Pets, Shop, Upgrades, Index, Trade et Settings.
 
 local HOTBAR_BUTTON = 74
 local hotbar = make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 1),
 	Position = UDim2.new(0.5, 0, 1, -20),
-	Size = UDim2.new(0, 0, 0, HOTBAR_BUTTON),
-	AutomaticSize = Enum.AutomaticSize.X,
+	Size = UDim2.new(0, HOTBAR_BUTTON, 0, HOTBAR_BUTTON),
 	BackgroundTransparency = 1,
+	ZIndex = 15, -- au-dessus de la Force (mais sous les fenêtres)
 }, gui)
-make("UIListLayout", {
-	FillDirection = Enum.FillDirection.Horizontal,
-	Padding = UDim.new(0, 14),
-	SortOrder = Enum.SortOrder.LayoutOrder,
-	VerticalAlignment = Enum.VerticalAlignment.Bottom,
-}, hotbar)
 
--- Un bouton de la barre : un carré blanc au gros contour, une grosse icône et son nom en dessous
-local function hotbarButton(order, emoji, text, onClick)
+-- le panneau qui s'ouvre au-dessus du bouton Menu
+local menuPanel = make("Frame", {
+	AnchorPoint = Vector2.new(0.5, 1),
+	Position = UDim2.new(0.5, 0, 0, -18),
+	Size = UDim2.new(0, 3 * HOTBAR_BUTTON + 2 * 16 + 44, 0, 2 * HOTBAR_BUTTON + 30 + 52),
+	BackgroundColor3 = Theme.Panel,
+	Visible = false,
+	ZIndex = 10,
+}, hotbar)
+round(menuPanel, 22)
+border(menuPanel, 5)
+local menuScale = make("UIScale", {}, menuPanel)
+local menuGrid = make("Frame", { Position = UDim2.new(0, 22, 0, 18), Size = UDim2.new(1, -44, 1, -36), BackgroundTransparency = 1 }, menuPanel)
+make("UIGridLayout", {
+	CellSize = UDim2.new(0, HOTBAR_BUTTON, 0, HOTBAR_BUTTON),
+	CellPadding = UDim2.new(0, 16, 0, 30),
+	SortOrder = Enum.SortOrder.LayoutOrder,
+}, menuGrid)
+
+local function setMenuOpen(open)
+	if open == menuPanel.Visible then
+		return
+	end
+	menuPanel.Visible = open
+	if open then
+		menuScale.Scale = 0.6
+		TweenService:Create(menuScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	end
+end
+
+-- Un bouton : un carré blanc au gros contour, une grosse icône et son nom en dessous
+local function hotbarButton(parent, order, emoji, text, onClick)
 	local button = make("TextButton", {
 		Name = "Hotbar_" .. text,
 		Size = UDim2.new(0, HOTBAR_BUTTON, 0, HOTBAR_BUTTON),
@@ -191,7 +216,7 @@ local function hotbarButton(order, emoji, text, onClick)
 		Text = "",
 		AutoButtonColor = false,
 		LayoutOrder = order,
-	}, hotbar)
+	}, parent)
 	round(button, 18)
 	border(button, 4)
 	local face = make("Frame", { Size = UDim2.new(1, 0, 1, -5), BackgroundColor3 = Color3.new(1, 1, 1) }, button)
@@ -222,21 +247,40 @@ local function hotbarButton(order, emoji, text, onClick)
 	return button, dot
 end
 
-local _, dot = hotbarButton(1, "🐾", "Pets", function()
-	openWindow("Inventory")
+-- le bouton Menu : 4 petits carrés de couleur, et le point rouge "nouveau !" de l'inventaire
+local menuButton, dot = hotbarButton(hotbar, 0, "", "Menu", function()
+	setMenuOpen(not menuPanel.Visible)
 end)
 UI.inventoryDot = dot
-hotbarButton(2, "🛒", "Shop", function()
+local menuFace = menuButton:FindFirstChildWhichIsA("Frame")
+local squares = make("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.47, 0), Size = UDim2.fromScale(0.66, 0.66), BackgroundTransparency = 1 }, menuFace)
+make("UIGridLayout", { CellSize = UDim2.new(0.5, -3, 0.5, -3), CellPadding = UDim2.new(0, 6, 0, 6) }, squares)
+for _, color in { Color3.fromRGB(40, 220, 210), Color3.fromRGB(255, 200, 40), Color3.fromRGB(255, 60, 150), Color3.fromRGB(200, 240, 50) } do
+	local square = make("Frame", { BackgroundColor3 = color }, squares)
+	round(square, 6)
+end
+
+-- les boutons du panneau (le panneau se ferme quand on en choisit un)
+local function menuEntry(order, emoji, text, onClick)
+	hotbarButton(menuGrid, order, emoji, text, function()
+		setMenuOpen(false)
+		onClick()
+	end)
+end
+menuEntry(1, "🐾", "Pets", function()
+	openWindow("Inventory")
+end)
+menuEntry(2, "🛒", "Shop", function()
 	openWindow("Shop")
 end)
-hotbarButton(3, "⚡", "Upgrades", function()
+menuEntry(3, "⚡", "Upgrades", function()
 	openWindow("Upgrades")
 end)
-hotbarButton(4, "📖", "Index", function()
+menuEntry(4, "📖", "Index", function()
 	openWindow("Index")
 end)
-hotbarButton(5, "🔄", "Trade", comingSoon)
-hotbarButton(6, "⚙️", "Settings", function()
+menuEntry(5, "🔄", "Trade", comingSoon)
+menuEntry(6, "⚙️", "Settings", function()
 	openWindow("Settings")
 end)
 
