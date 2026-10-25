@@ -628,6 +628,8 @@ local function updateBoosts()
 	for _, abilityId in Config.AbilityOrder do
 		key ..= string.format("%.3f,", bonuses[abilityId] or 1)
 	end
+	local indexMultiplier = UI.state and UI.state.IndexMultiplier or 1
+	key ..= string.format("%.3f", indexMultiplier)
 	if key == lastBoostKey then
 		return -- rien n'a changé : on ne reconstruit pas
 	end
@@ -643,6 +645,24 @@ local function updateBoosts()
 				openWindow("Inventory")
 			end)
 		end
+	end
+	-- le multiplicateur de Force de l'Index (📖 x1.05), quand on a réclamé au moins une ligne
+	if indexMultiplier > 1.001 then
+		local chip = make("Frame", { BackgroundColor3 = Theme.PanelDark, Size = UDim2.new(0, 116, 0, 34), LayoutOrder = 100 }, boostRow)
+		round(chip, 17)
+		border(chip, 2, Theme.Gold)
+		icon(chip, "📖", { Position = UDim2.new(0, 6, 0, 3), Size = UDim2.new(0, 28, 0, 28) })
+		label(chip, {
+			Position = UDim2.new(0, 38, 0, 5),
+			Size = UDim2.new(1, -46, 1, -10),
+			Text = formatMultiplier(indexMultiplier),
+			TextColor3 = Theme.Gold,
+			TextXAlignment = Enum.TextXAlignment.Left,
+		}, 1.5)
+		local button = make("TextButton", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "" }, chip)
+		button.Activated:Connect(function()
+			openWindow("Index")
+		end)
 	end
 end
 updateBoosts()

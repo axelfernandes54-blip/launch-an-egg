@@ -30,17 +30,20 @@ local function getBonuses(data)
 	bonuses.Luck += Config.UpgradeBonus("Luck", levels.Luck)
 	bonuses.Coins += Config.UpgradeBonus("Coins", levels.Coins)
 	bonuses.Dumbbell += Config.UpgradeBonus("Lifting", levels.Lifting)
-	-- l'Index : chaque ligne de pets complétée et réclamée donne de la Force en plus
+	return bonuses
+end
+
+-- L'Index : chaque ligne de pets complétée et réclamée augmente un multiplicateur de Force (x1.05, x1.1...)
+local function getIndexMultiplier(data)
 	local claimed = 0
 	for _ in data.IndexClaimed or {} do
 		claimed += 1
 	end
-	bonuses.Strength += claimed * Config.IndexReward.StrengthPerRow
-	return bonuses
+	return Config.IndexMultiplier(claimed)
 end
 
 local function getMultiplier(data)
-	return (1 + Config.UpgradeBonus("Power", data.Upgrades.Power)) * getBonuses(data).Strength
+	return (1 + Config.UpgradeBonus("Power", data.Upgrades.Power)) * getBonuses(data).Strength * getIndexMultiplier(data)
 end
 
 -- La Force totale (💪) : Force de départ + haltères, multipliée par les améliorations et les pets.
@@ -165,6 +168,7 @@ local function sendState(player)
 		Equipped = data.Equipped,
 		MaxEquipped = Config.Launch.MaxEquipped,
 		Bonuses = getBonuses(data),
+		IndexMultiplier = getIndexMultiplier(data), -- le multiplicateur de Force de l'Index (x1.05...)
 		Potions = data.Potions, -- [Id de la potion] = nombre
 		BoostTime = data.BoostTime, -- secondes de x2 Force qui restent (0 = pas de potion)
 	})

@@ -875,7 +875,7 @@ do
 end
 
 -- INDEX : une ligne par rareté (comme un album). Les pets pas encore trouvés sont des ombres "??".
--- Quand toute la ligne est trouvée : bouton "Claim" -> +5 % de Force pour toujours (Config.IndexReward).
+-- Quand toute la ligne est trouvée : bouton "Claim" -> multiplicateur de Force x1.05 pour toujours (Config.IndexReward).
 
 do
 	local index = makeWindow("Index", "PET INDEX", "📖", 960, 620)
@@ -883,7 +883,7 @@ do
 	local ClaimIndex = remotes:WaitForChild("ClaimIndex")
 	local lastSignature = nil
 	local ROW_HEIGHT, TILE = 150, 104
-	local rewardText = "+" .. math.round(Config.IndexReward.StrengthPerRow * 100) .. "%"
+	local rewardText = formatMultiplier(Config.IndexMultiplier(1))
 
 	local list = make("ScrollingFrame", {
 		Size = UDim2.new(1, 0, 1, -56),
@@ -998,7 +998,7 @@ do
 			icon(badge, "💪", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.new(0, 34, 0, 34) })
 			label(badge, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -10, 0, 34), Text = rewardText, Font = TITLE_FONT }, 2.5)
 		end
-		boostText.Text = string.format("💪 Total Index Boost: +%d%%", math.round(claimed * Config.IndexReward.StrengthPerRow * 100))
+		boostText.Text = "💪 Index Multiplier: " .. formatMultiplier(Config.IndexMultiplier(claimed))
 		countText.Text = string.format("Collected: %d/%d", found, total)
 	end
 end

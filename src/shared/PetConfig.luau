@@ -79,8 +79,14 @@ Config.Worlds = {
 }
 
 -- L'INDEX des pets (bouton 📖 Index) : une ligne par rareté. Quand on a trouvé tous les pets d'une ligne,
--- on clique "Claim" et on gagne pour toujours StrengthPerRow de Force en plus (0.05 = +5 %).
+-- on clique "Claim" et on gagne pour toujours un MULTIPLICATEUR de Force : x(1 + StrengthPerRow) par ligne
+-- (0.05 -> x1.05 avec 1 ligne, x1.1 avec 2 lignes...). Il multiplie la Force totale, comme les pets.
 Config.IndexReward = { StrengthPerRow = 0.05 }
+
+-- Le multiplicateur de l'Index pour un nombre de lignes réclamées
+function Config.IndexMultiplier(claimedRows)
+	return 1 + claimedRows * Config.IndexReward.StrengthPerRow
+end
 
 -- Les CLASSEMENTS (le grand panneau du lobby, touche E) : tous les serveurs, "Weekly" et "Lifetime".
 -- Title / Column : ce qu'on voit (anglais). Color : la couleur de la fenêtre. Icon : le bouton à gauche.

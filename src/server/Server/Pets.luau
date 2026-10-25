@@ -77,7 +77,11 @@ Remotes.ClaimIndex.OnServerEvent:Connect(function(player, rarityId)
 		end
 	end
 	data.IndexClaimed[rarityId] = true
-	ShowMessage:FireClient(player, string.format("📖 +%d%% Strength forever!", math.round(Config.IndexReward.StrengthPerRow * 100)))
+	local claimed = 0
+	for _ in data.IndexClaimed do
+		claimed += 1
+	end
+	ShowMessage:FireClient(player, "📖 Strength multiplier: x" .. (string.format("%.2f", Config.IndexMultiplier(claimed)):gsub("0+$", ""):gsub("%.$", "")) .. "!")
 	sendState(player)
 end)
 
