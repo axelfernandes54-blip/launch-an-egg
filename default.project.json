@@ -1,0 +1,37 @@
+{
+  "name": "launch-an-egg",
+  "tree": {
+    "$className": "DataModel",
+    "ServerScriptService": {
+      "$ignoreUnknownInstances": true,
+      "Main": { "$path": "src/server/Main.server.luau" },
+      "Server": { "$path": "src/server/Server" }
+    },
+    "StarterPlayer": {
+      "$ignoreUnknownInstances": true,
+      "StarterPlayerScripts": {
+        "$ignoreUnknownInstances": true,
+        "ClientMain": { "$path": "src/client/ClientMain.client.luau" },
+        "AnimateOthers": { "$path": "src/client/AnimateOthers.client.luau" },
+        "Client": { "$path": "src/client/Client" }
+      },
+      "StarterCharacterScripts": {
+        "$ignoreUnknownInstances": true,
+        "Animate": { "$path": "src/character/Animate.client.luau" }
+      }
+    },
+    "ReplicatedFirst": {
+      "$ignoreUnknownInstances": true,
+      "LoadingScreen": { "$path": "src/first/LoadingScreen.client.luau" }
+    },
+    "ReplicatedStorage": {
+      "$ignoreUnknownInstances": true,
+      "PetConfig": { "$path": "src/shared/PetConfig.luau" },
+      "CharacterAnimator": { "$path": "src/shared/CharacterAnimator.luau" }
+    },
+    "ServerStorage": {
+      "$ignoreUnknownInstances": true,
+      "Outils": { "$path": "src/tools/Outils" }
+    }
+  }
+}
