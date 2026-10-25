@@ -1,6 +1,7 @@
 -- Launch (ModuleScript dans ServerScriptService > Server)
 -- Le lancer d'œuf (seul ou à deux) : coup de pied, vol, apparence de l'œuf selon la zone, atterrissage, pet gagné.
--- La distance affichée dépend de la dimension du joueur (voir Config.Dimensions) ; la piste est la même partout.
+-- La dimension (et la distance affichée) dépend de la Force du tir (voir Config.Dimensions) ; la piste est la même partout.
+-- Chaque lancer rapporte aussi des pièces (Config.LaunchCoinsPerStud).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -350,8 +351,9 @@ local function runLaunch(kickers)
 	-- la distance voulue (voir Config.Progression, + le trait "Distance" des pets), en distance affichée,
 	-- puis l'endroit où l'œuf doit tomber sur la piste de la dimension du joueur (studs réels),
 	-- puis la vitesse qu'il faut donner à l'œuf pour l'atteindre
-	local dimension = valid[1].Data.Dimension -- en duo, les deux joueurs sont dans la même dimension
 	local wantedDistance = Config.DistanceForForce(kickForce) * launchBonus
+	-- la dimension se choisit toute seule : au-delà de 10K, l'œuf vole dans la Dimension 2, etc.
+	local dimension = Config.DimensionForDistance(wantedDistance).Id
 	local targetDistance = math.max(6, Config.ToTrackDistance(wantedDistance, dimension))
 	targetDistance += math.max(0, -(center.X + 3.5)) -- l'œuf part de la plateforme, avant la ligne de départ (x = 0)
 	local speed = math.sqrt(targetDistance * workspace.Gravity / math.sin(2 * math.rad(launch.Angle)))
@@ -392,7 +394,7 @@ local function runLaunch(kickers)
 			-- Le monde se charge autour de l'œuf (et plus autour du joueur) pendant le vol
 			kicker.Player.ReplicationFocus = egg
 			local partner = isDuo and valid[3 - i].Player or nil
-			EggLaunched:FireClient(kicker.Player, egg, kickForce, partner and partner.DisplayName or nil)
+			EggLaunched:FireClient(kicker.Player, egg, kickForce, partner and partner.DisplayName or nil, dimension)
 		end
 	end
 	for _, kicker in valid do
@@ -468,6 +470,9 @@ local function runLaunch(kickers)
 				table.insert(data.Equipped, petKey(newPet)) -- il reste une place : le nouveau pet est équipé tout seul
 			end
 			data.Best = math.max(data.Best, distance)
+			-- les pièces du lancer : plus l'œuf va loin, plus on en gagne (x le bonus de pièces des pets et de l'upgrade)
+			local coins = math.floor(distance * Config.LaunchCoinsPerStud * getBonuses(data).Coins)
+			data.Coins += coins
 			data.Busy = false
 			if isDuo then
 				data.DuoKicks += 1
@@ -481,6 +486,8 @@ local function runLaunch(kickers)
 				PetName = petName,
 				KickForce = kickForce,
 				GotReroll = false, -- (les lancers ne donnent plus de Rerolls : les diamants viennent des haltères)
+				Coins = coins,
+				Dimension = dimension,
 				Chance = chances[rarityId], -- la chance (en %) qu'on avait d'avoir cette rareté
 				Duo = isDuo,
 			})

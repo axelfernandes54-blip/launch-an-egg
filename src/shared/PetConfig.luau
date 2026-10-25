@@ -62,14 +62,24 @@ Config.DiamondsPerOldReroll = 5
 
 Config.WorldName = "PIRATE SEAS" -- le nom du monde 1 (affiché en haut de l'écran)
 
--- Les DIMENSIONS : chaque dimension a la même piste (même taille), mais des distances affichées plus grandes.
--- Start / Finish : les distances affichées au début et au bout de la piste. Cost : prix en pièces 💰 pour la débloquer.
+-- Les DIMENSIONS : libres, on y arrive avec sa Force. Chaque dimension a la même piste (même taille),
+-- mais des distances affichées plus grandes. Si un lancer dépasse la fin d'une dimension, l'œuf vole dans la suivante.
+-- Start / Finish : les distances affichées au début et au bout de la piste.
 -- Name : ce que voient les joueurs (anglais). Pour ajouter une dimension : copie une ligne.
 Config.Dimensions = {
-	{ Id = 1, Name = "DIMENSION 1", Start = 0,     Finish = 10000,  Cost = 0 },
-	{ Id = 2, Name = "DIMENSION 2", Start = 10000, Finish = 100000, Cost = 1000000 },
+	{ Id = 1, Name = "DIMENSION 1", Start = 0,     Finish = 10000 },
+	{ Id = 2, Name = "DIMENSION 2", Start = 10000, Finish = 100000 },
 }
 Config.TrackLength = 1800 -- la longueur réelle de la piste (en studs), la même dans chaque dimension
+
+-- Les WORLDS : ils s'achètent avec des pièces 💰 au portail du lobby. Cost : le prix. Id 1 = le monde de départ.
+Config.Worlds = {
+	{ Id = 1, Name = "WORLD 1", Theme = "Pirate Seas", Cost = 0 },
+	{ Id = 2, Name = "WORLD 2", Theme = "Coming soon", Cost = 1000000 },
+}
+
+-- Les pièces 💰 gagnées à chaque lancer : la distance affichée x LaunchCoinsPerStud (x le bonus de pièces)
+Config.LaunchCoinsPerStud = 0.1
 
 -- Les parties de la piste (de simples ambiances : elles ne garantissent AUCUNE rareté).
 -- Start / Finish : en studs RÉELS sur la piste (0 à TrackLength), pareil dans chaque dimension.
@@ -240,6 +250,25 @@ function Config.GetDimension(id)
 		end
 	end
 	return Config.Dimensions[1]
+end
+
+-- La dimension où vole un œuf qui doit aller à cette distance (affichée)
+function Config.DimensionForDistance(displayDistance)
+	for _, dimension in Config.Dimensions do
+		if displayDistance < dimension.Finish then
+			return dimension
+		end
+	end
+	return Config.Dimensions[#Config.Dimensions]
+end
+
+function Config.GetWorld(id)
+	for _, world in Config.Worlds do
+		if world.Id == id then
+			return world
+		end
+	end
+	return nil
 end
 
 -- Où est-on sur la piste (studs réels) -> la distance affichée dans cette dimension

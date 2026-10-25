@@ -302,7 +302,8 @@ local function arcadeBurst(text, color)
 	end)
 end
 
-EggLaunched.OnClientEvent:Connect(function(egg, kickForce, duoPartnerName)
+EggLaunched.OnClientEvent:Connect(function(egg, kickForce, duoPartnerName, dimension)
+	UI.flightDimension = dimension -- la dimension où vole l'œuf (pour la barre du haut)
 	-- En duo, le partenaire a pu déclencher le tir : on arrête de charger
 	ready = false
 	UI.lastLaunchRequest = nil
@@ -485,7 +486,7 @@ do
 			end
 		end)
 		nameText.Text = result.PetName
-		abilityText.Text = result.GotReroll and "💎 +1 Reroll!" or "✨ Get a trait at the Trait Master!"
+		abilityText.Text = (result.Coins or 0) > 0 and ("💰 +" .. formatNumber(result.Coins) .. " coins!") or "✨ Get a trait at the Trait Master!"
 		-- la distance (avec une virgule pour les milliers) et la chance qu'on avait pour cette rareté
 		local distanceText = tostring(result.Distance):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
 		local chance = result.Chance or 0

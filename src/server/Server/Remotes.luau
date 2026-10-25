@@ -38,13 +38,13 @@ local DuoRespond = makeRemote("DuoRespond")     -- client -> serveur : "j'accept
 local DuoLeave = makeRemote("DuoLeave")         -- client -> serveur : "je quitte le duo"
 local DuoInvited = makeRemote("DuoInvited")     -- serveur -> client : "ce joueur t'invite à tirer avec lui"
 local DuoUpdate = makeRemote("DuoUpdate")       -- serveur -> client : ton duo (partenaire, prêt ?) ou nil
-local OpenDimensions = makeRemote("OpenDimensions") -- serveur -> client : "ouvre la fenêtre des dimensions"
-local ChooseDimension = makeRemote("ChooseDimension") -- client -> serveur : "je débloque / je vais dans cette dimension"
+local OpenWorlds = makeRemote("OpenWorlds")     -- serveur -> client : "ouvre la fenêtre des worlds"
+local ChooseWorld = makeRemote("ChooseWorld")   -- client -> serveur : "j'achète / je vais dans ce world" (en pièces)
 return {
 	LaunchEgg = LaunchEgg, BuyUpgrade = BuyUpgrade, EggLaunched = EggLaunched, EggLanded = EggLanded,
 	StateChanged = StateChanged, DumbbellCollected = DumbbellCollected, EquipPet = EquipPet, EquipBest = EquipBest,
 	RerollTrait = RerollTrait, TraitRerolled = TraitRerolled, OpenTraits = OpenTraits, SetUIScale = SetUIScale,
 	World2Unlocked = World2Unlocked, ShowMessage = ShowMessage, UsePotion = UsePotion, OpenCodes = OpenCodes,
 	RedeemCode = RedeemCode, DuoInvite = DuoInvite, DuoRespond = DuoRespond, DuoLeave = DuoLeave,
-	DuoInvited = DuoInvited, DuoUpdate = DuoUpdate, OpenDimensions = OpenDimensions, ChooseDimension = ChooseDimension,
+	DuoInvited = DuoInvited, DuoUpdate = DuoUpdate, OpenWorlds = OpenWorlds, ChooseWorld = ChooseWorld,
 }

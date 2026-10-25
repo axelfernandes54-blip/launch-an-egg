@@ -42,50 +42,47 @@ for _, prompt in CollectionService:GetTagged("ReturnPrompt") do
 	end)
 end
 
--- Le portail du lobby : il ouvre la fenêtre des DIMENSIONS (on en débloque une avec des pièces, puis on y joue)
-local OpenDimensions, ChooseDimension = Remotes.OpenDimensions, Remotes.ChooseDimension
-local Duo = require(script.Parent.Duo)
+
+-- Le portail du lobby : il ouvre la fenêtre des WORLDS (on achète un world avec des pièces 💰, puis on y va)
+-- (les dimensions, elles, sont libres : on y arrive avec sa Force)
+local OpenWorlds, ChooseWorld = Remotes.OpenWorlds, Remotes.ChooseWorld
 for _, prompt in CollectionService:GetTagged("World2Prompt") do
-	prompt.ActionText = "Dimensions"
+	prompt.ActionText = "Worlds"
 	prompt.Triggered:Connect(function(player)
-		OpenDimensions:FireClient(player)
+		OpenWorlds:FireClient(player)
 	end)
 end
 
-ChooseDimension.OnServerEvent:Connect(function(player, dimensionId)
+ChooseWorld.OnServerEvent:Connect(function(player, worldId)
 	local data = playerData[player]
-	if not data or data.Busy or typeof(dimensionId) ~= "number" then
+	local world = typeof(worldId) == "number" and Config.GetWorld(worldId)
+	if not data or data.Busy or not world then
 		return
 	end
-	local dimension = nil
-	for _, candidate in Config.Dimensions do
-		if candidate.Id == dimensionId then
-			dimension = candidate
-		end
-	end
-	if not dimension then
-		return
-	end
-	if not data.UnlockedDimensions[dimension.Id] then
-		-- il faut d'abord la débloquer avec des pièces (et avoir débloqué celle d'avant)
-		local previous = Config.Dimensions[table.find(Config.Dimensions, dimension) - 1]
-		if previous and not data.UnlockedDimensions[previous.Id] then
+	if not data.UnlockedWorlds[world.Id] then
+		-- il faut l'acheter avec des pièces (et avoir le world d'avant)
+		local previous = Config.GetWorld(world.Id - 1)
+		if previous and not data.UnlockedWorlds[previous.Id] then
 			ShowMessage:FireClient(player, "🔒 Unlock " .. previous.Name .. " first!")
 			return
 		end
-		if data.Coins < dimension.Cost then
+		if data.Coins < world.Cost then
 			ShowMessage:FireClient(player, "Not enough coins!")
 			return
 		end
-		data.Coins -= dimension.Cost
-		data.UnlockedDimensions[dimension.Id] = true
-		ShowMessage:FireClient(player, "🌀 " .. dimension.Name .. " UNLOCKED!")
+		data.Coins -= world.Cost
+		data.UnlockedWorlds[world.Id] = true
+		ShowMessage:FireClient(player, "🌍 " .. world.Name .. " UNLOCKED!")
+		sendState(player)
 	end
-	if data.Dimension ~= dimension.Id then
-		Duo.Break(player, player.DisplayName .. " changed dimension") -- un duo joue dans une seule dimension
+	if player.Character then
+		if world.Id == 1 then
+			player.Character:PivotTo(MapInfo.LOBBY_SPAWN)
+		else
+			-- le World 2 n'est pas encore construit : on va dans la zone "Coming soon"
+			player.Character:PivotTo(CFrame.new(WORLD2_SPOT + Vector3.new(0, 4, 10)))
+		end
 	end
-	data.Dimension = dimension.Id
-	sendState(player)
 end)
 
 return {}

@@ -33,10 +33,10 @@ OpenCodes.OnClientEvent:Connect(function()
 	end
 end)
 
--- Le portail du lobby ouvre la fenêtre des dimensions
-remotes:WaitForChild("OpenDimensions").OnClientEvent:Connect(function()
-	if UI.openWindowName ~= "Dimensions" then
-		openWindow("Dimensions")
+-- Le portail du lobby ouvre la fenêtre des worlds
+remotes:WaitForChild("OpenWorlds").OnClientEvent:Connect(function()
+	if UI.openWindowName ~= "Worlds" then
+		openWindow("Worlds")
 	end
 end)
 
@@ -47,9 +47,9 @@ OpenTraits.OnClientEvent:Connect(function()
 	end
 end)
 
--- Le portail de la dimension suivante -------------------------------------------
--- Sur la barre du haut : un cadenas tant qu'elle est fermée, et il brille quand elle est débloquée.
--- Dans le lobby : le panneau du portail dit "DIMENSIONS".
+-- Le portail du World 2 ---------------------------------------------------------
+-- Sur la barre du haut : un cadenas tant qu'il n'est pas acheté, et il brille ensuite.
+-- Dans le lobby : le panneau du portail dit "WORLDS".
 local showWorld2
 do
 	local portalLock = make("TextLabel", {
@@ -80,7 +80,7 @@ do
 			for _, text in map:GetDescendants() do
 				if text:IsA("TextLabel") and string.find(text.Text, "WORLD 2") and string.find(text.Text, "Coming soon") and not string.find(text.Text, "\n.*\n") then
 					if text.Parent and text.Parent.Parent and (text.Parent.Parent.Position - Vector3.new(-160, 26, 66)).Magnitude < 20 then
-						text.Text = "🌀 DIMENSIONS" -- le portail ouvre maintenant la fenêtre des dimensions
+						text.Text = "🌍 WORLDS" -- le portail ouvre maintenant la fenêtre des worlds
 						signDone = true
 					end
 				end
@@ -159,10 +159,8 @@ StateChanged.OnClientEvent:Connect(function(newState)
 	coinsValue.Text = formatNumber(UI.state.Coins)
 	bestValue.Text = formatNumber(UI.state.Best) .. " studs"
 	rerollsValue.Text = formatNumber(UI.state.Diamonds or 0)
-	-- la barre du haut suit la dimension ; le portail au bout brille si la dimension suivante est débloquée
-	local dimension = UI.state.Dimension or 1
-	UI.showDimension(dimension)
-	showWorld2((UI.state.UnlockedDimensions or {})[dimension + 1] == true)
+	-- le portail au bout de la barre brille quand le World 2 est acheté (la barre suit la dimension : voir Hud)
+	showWorld2((UI.state.UnlockedWorlds or {})[2] == true)
 	coinRate.Text = "+" .. formatNumber(UI.state.CoinsPerSecond or 0) .. "/s"
 
 	-- Le compteur de Force grossit un instant quand il augmente

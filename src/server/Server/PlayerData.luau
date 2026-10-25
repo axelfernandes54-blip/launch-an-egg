@@ -147,8 +147,8 @@ local function sendState(player)
 		NameCounts = nameCounts,
 		Diamonds = data.Diamonds,
 		UIScale = data.UIScale,
-		Dimension = data.Dimension, -- la dimension où on joue
-		UnlockedDimensions = data.UnlockedDimensions, -- [Id] = true
+		Dimension = Config.DimensionForDistance(data.Best).Id, -- la dimension de son record (pour la barre du haut)
+		UnlockedWorlds = data.UnlockedWorlds, -- [Id] = true
 		Equipped = data.Equipped,
 		MaxEquipped = Config.Launch.MaxEquipped,
 		Bonuses = getBonuses(data),
@@ -237,12 +237,12 @@ local function loadProgress(player, data)
 		if (tonumber(saved.Version) or 1) < 2 then
 			-- ancienne sauvegarde (avant les dimensions et les diamants, 25/10/2026) :
 			-- le record passe en distance de la Dimension 1, les Rerolls deviennent des diamants,
-			-- le niveau de Power Up devient l'upgrade Kick Power, et le portail touché débloque la Dimension 2
+			-- le niveau de Power Up devient l'upgrade Kick Power, et le portail touché débloque le World 2
 			data.Best = Config.ToDisplayDistance(data.Best, 1)
 			data.Diamonds = math.floor((tonumber(saved.Rerolls) or 0) * Config.DiamondsPerOldReroll)
 			data.Upgrades.Power = math.clamp(math.floor(tonumber(saved.UpgradeLevel) or 0), 0, Config.GetUpgrade("Power").MaxLevel)
 			if saved.World2Unlocked == true then
-				data.UnlockedDimensions[2] = true
+				data.UnlockedWorlds[2] = true
 			end
 		else
 			data.Diamonds = math.max(0, math.floor(tonumber(saved.Diamonds) or 0))
@@ -251,16 +251,15 @@ local function loadProgress(player, data)
 					data.Upgrades[upgrade.Id] = math.clamp(math.floor(tonumber(saved.Upgrades[upgrade.Id]) or 0), 0, upgrade.MaxLevel)
 				end
 			end
-			if type(saved.UnlockedDimensions) == "table" then
-				for _, id in saved.UnlockedDimensions do
-					if tonumber(id) then
-						data.UnlockedDimensions[tonumber(id)] = true
+			-- (quelques sauvegardes du 25/10 ont "UnlockedDimensions" : c'était la même chose que les worlds)
+			for _, list in { saved.UnlockedWorlds, saved.UnlockedDimensions } do
+				if type(list) == "table" then
+					for _, id in list do
+						if tonumber(id) and Config.GetWorld(tonumber(id)) then
+							data.UnlockedWorlds[tonumber(id)] = true
+						end
 					end
 				end
-			end
-			local dimension = tonumber(saved.Dimension) or 1
-			if data.UnlockedDimensions[dimension] then
-				data.Dimension = dimension
 			end
 		end
 		data.DuoKicks = math.max(0, math.floor(tonumber(saved.DuoKicks) or 0))
@@ -298,7 +297,7 @@ local function saveProgress(player, data)
 		table.insert(usedCodes, code)
 	end
 	local unlocked = {}
-	for id in data.UnlockedDimensions do
+	for id in data.UnlockedWorlds do
 		table.insert(unlocked, id)
 	end
 	local snapshot = {
@@ -311,8 +310,7 @@ local function saveProgress(player, data)
 		Equipped = data.Equipped, -- les pets équipés (liste de noms)
 		Diamonds = data.Diamonds,
 		UIScale = data.UIScale,
-		Dimension = data.Dimension,
-		UnlockedDimensions = unlocked, -- les dimensions débloquées (liste d'Id)
+		UnlockedWorlds = unlocked, -- les worlds achetés (liste d'Id)
 		DuoKicks = data.DuoKicks,
 		Potions = data.Potions,
 		BoostTime = math.floor(data.BoostTime),
@@ -350,8 +348,7 @@ Players.PlayerAdded:Connect(function(player)
 		Diamonds = 0, -- les diamants 💎 (gagnés avec les haltères) : upgrades et Trait Master
 		Upgrades = { Power = 0, Magnet = 0, Luck = 0, Coins = 0, Lifting = 0 }, -- niveaux des upgrades
 		UIScale = 1, -- la taille de l'interface choisie dans Settings (0.7 à 1.3)
-		Dimension = 1, -- la dimension où on joue
-		UnlockedDimensions = { [1] = true }, -- les dimensions débloquées (avec des pièces)
+		UnlockedWorlds = { [1] = true }, -- les worlds achetés avec des pièces au portail du lobby
 		DuoKicks = 0, -- nombre de coups de pied à deux réussis
 		Best = 0,
 		Strength = 0, -- points de Force gagnés avec les haltères (on les garde)

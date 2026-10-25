@@ -413,12 +413,16 @@ RunService.RenderStepped:Connect(function(dt)
 		-- pendant le vol, la tête suit l'œuf et affiche la distance en direct
 		local trackDistance = math.max(0, UI.trackedEgg.Position.X)
 		markerProgress = distanceToBar(trackDistance)
-		local shown = Config.ToDisplayDistance(trackDistance, UI.state and UI.state.Dimension or 1)
+		-- la barre passe à la dimension où vole l'œuf (au-delà de 10K : Dimension 2)
+		local dimension = UI.flightDimension or 1
+		showDimension(dimension)
+		local shown = Config.ToDisplayDistance(trackDistance, dimension)
 		recordLabel.Text = "You: " .. formatNumber(shown) .. " studs\n▼"
 	else
 		-- sinon, elle revient doucement au départ
 		markerProgress += (0 - markerProgress) * math.min(1, dt * 4)
 		recordLabel.Text = "You\n▼"
+		showDimension(UI.state and UI.state.Dimension or 1) -- au repos : la dimension de notre record
 	end
 	recordMarker.Position = UDim2.fromScale(markerProgress, 0.5)
 end)

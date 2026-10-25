@@ -1,5 +1,5 @@
 -- Windows (ModuleScript dans StarterPlayer > StarterPlayerScripts > Client)
--- Les fenêtres : Shop (Robux), Upgrades (diamants), Dimensions (pièces), Inventory (onglets PETS / POTIONS...), Codes,
+-- Les fenêtres : Shop (Robux), Upgrades (diamants), Worlds (pièces), Inventory (onglets PETS / POTIONS...), Codes,
 -- Trait Master, Collection, Leaderboard et Settings.
 
 local UI = require(script.Parent.UI)
@@ -196,31 +196,32 @@ do
 	end
 end
 
--- DIMENSIONS (le portail du lobby) : débloquer une dimension avec des pièces 💰, puis y jouer
+-- WORLDS (le portail du lobby) : acheter un world avec des pièces 💰, puis y aller
+-- (les dimensions, elles, sont libres : l'œuf y arrive tout seul quand on a assez de Force)
 do
 	local CARD_HEIGHT = 96
-	local dimensionsWindow = makeWindow("Dimensions", "DIMENSIONS", "🌀", 620, 130 + #Config.Dimensions * (CARD_HEIGHT + 12))
-	local ChooseDimension = remotes:WaitForChild("ChooseDimension")
+	local worldsWindow = makeWindow("Worlds", "WORLDS", "🌍", 620, 130 + #Config.Worlds * (CARD_HEIGHT + 12))
+	local ChooseWorld = remotes:WaitForChild("ChooseWorld")
 	local cards = {}
-	for index, dimension in Config.Dimensions do
+	for index, world in Config.Worlds do
 		local card = make("Frame", {
 			Position = UDim2.new(0, 0, 0, (index - 1) * (CARD_HEIGHT + 12)),
 			Size = UDim2.new(1, 0, 0, CARD_HEIGHT),
 			BackgroundColor3 = Theme.PanelLight,
-		}, dimensionsWindow.Content)
+		}, worldsWindow.Content)
 		round(card, 16)
-		local stroke = border(card, 3)
+		border(card, 3)
 		label(card, {
 			Position = UDim2.new(0, 16, 0, 10),
 			Size = UDim2.new(1, -230, 0, 38),
-			Text = "🌀 " .. dimension.Name,
+			Text = "🌍 " .. world.Name,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Font = TITLE_FONT,
 		}, 2.5)
 		label(card, {
 			Position = UDim2.new(0, 16, 0, 54),
 			Size = UDim2.new(1, -230, 0, 28),
-			Text = (dimension.Start == 0 and "START" or formatNumber(dimension.Start)) .. " → " .. formatNumber(dimension.Finish) .. " studs",
+			Text = world.Theme,
 			TextColor3 = Theme.SubText,
 			TextXAlignment = Enum.TextXAlignment.Left,
 		}, 1.5)
@@ -233,40 +234,34 @@ do
 			if not UI.state then
 				return
 			end
-			local unlocked = UI.state.UnlockedDimensions and UI.state.UnlockedDimensions[dimension.Id]
-			if UI.state.Dimension == dimension.Id then
-				toast("You are already here!")
-			elseif not unlocked and UI.state.Coins < dimension.Cost then
-				toast("Not enough coins!")
+			local unlocked = UI.state.UnlockedWorlds and UI.state.UnlockedWorlds[world.Id]
+			if not unlocked and UI.state.Coins < world.Cost then
+				toast("Not enough coins! Launch eggs and equip pets to earn more 💰")
 			else
-				ChooseDimension:FireServer(dimension.Id)
+				ChooseWorld:FireServer(world.Id)
+				closeWindow()
 			end
 		end)
-		cards[dimension.Id] = { Button = button, Stroke = stroke }
+		cards[world.Id] = button
 	end
-	label(dimensionsWindow.Content, {
+	label(worldsWindow.Content, {
 		AnchorPoint = Vector2.new(0.5, 1),
 		Position = UDim2.new(0.5, 0, 1, 0),
 		Size = UDim2.new(1, 0, 0, 24),
-		Text = "The stronger you are, the farther you go!",
+		Text = "💰 Earn coins with your pets and by launching eggs!",
 		TextColor3 = Theme.SubText,
 	}, 1.5)
 
-	dimensionsWindow.Refresh = function()
-		for _, dimension in Config.Dimensions do
-			local card = cards[dimension.Id]
-			local unlocked = UI.state and UI.state.UnlockedDimensions and UI.state.UnlockedDimensions[dimension.Id]
-			local here = UI.state and UI.state.Dimension == dimension.Id
-			card.Stroke.Color = here and Theme.Gold or OUTLINE
-			if here then
-				card.Button.Label.Text = "✔ HERE"
-				card.Button.SetStyle("Grey")
-			elseif unlocked then
-				card.Button.Label.Text = "GO!"
-				card.Button.SetStyle("Green")
+	worldsWindow.Refresh = function()
+		for _, world in Config.Worlds do
+			local button = cards[world.Id]
+			local unlocked = UI.state and UI.state.UnlockedWorlds and UI.state.UnlockedWorlds[world.Id]
+			if unlocked then
+				button.Label.Text = "GO!"
+				button.SetStyle("Green")
 			else
-				card.Button.Label.Text = "💰 " .. formatNumber(dimension.Cost)
-				card.Button.SetStyle(UI.state and UI.state.Coins >= dimension.Cost and "Gold" or "Grey")
+				button.Label.Text = "💰 " .. formatNumber(world.Cost)
+				button.SetStyle(UI.state and UI.state.Coins >= world.Cost and "Gold" or "Grey")
 			end
 		end
 	end
