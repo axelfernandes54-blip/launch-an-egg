@@ -486,7 +486,7 @@ do
 			end
 		end)
 		nameText.Text = result.PetName
-		abilityText.Text = (result.Coins or 0) > 0 and ("💰 +" .. formatNumber(result.Coins) .. " coins!") or "✨ Get a trait at the Trait Master!"
+		abilityText.Text = (result.Coins or 0) > 0 and ("💰 +" .. formatNumber(result.Coins)) or ""
 		-- la distance (avec une virgule pour les milliers) et la chance qu'on avait pour cette rareté
 		local distanceText = tostring(result.Distance):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
 		local chance = result.Chance or 0

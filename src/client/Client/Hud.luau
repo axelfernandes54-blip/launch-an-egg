@@ -159,7 +159,7 @@ local rerollsValue = makeCounter(112, CRYSTAL_IMAGE, ButtonStyles.Purple[2], fun
 	openWindow("Upgrades")
 end)
 
--- les pièces gagnées chaque seconde (avec le bonus des pets), à gauche du compteur
+-- le multiplicateur de pièces des lancers (pets équipés, trait Coins, upgrade), à gauche du compteur
 local coinRate = label(rightColumn, {
 	AnchorPoint = Vector2.new(1, 0.5),
 	Position = UDim2.new(0, -6, 0, 79),

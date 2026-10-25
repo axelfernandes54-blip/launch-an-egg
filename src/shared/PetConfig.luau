@@ -4,16 +4,16 @@
 local Config = {}
 
 -- Les 5 raretés, de la plus faible à la plus forte.
--- CoinsPerSecond : pièces gagnées chaque seconde par un pet de cette rareté.
+-- CoinBonus : multiplicateur de pièces des lancers quand le pet est équipé (0.25 = +25 %, les pets ne donnent plus de pièces par seconde).
 -- PowerBonus : bonus de force de lancer (0.10 = +10 %) quand le pet est équipé.
 -- Id : le nom interne (ne pas changer). Name et Pets : ce que voient les joueurs (en anglais).
 -- Les pets du monde "Pirate Seas" : des animaux pirates inventés (modèles 3D dans ReplicatedStorage > PetModels).
 Config.Rarities = {
-	{ Id = "Commune",    Name = "Common",    Color = Color3.fromRGB(170, 170, 170), CoinsPerSecond = 1,  PowerBonus = 0.05, Pets = { "Deckhand Otter", "Crab Cook", "Parrot Lookout" } },
-	{ Id = "Rare",       Name = "Rare",      Color = Color3.fromRGB(60, 140, 255),  CoinsPerSecond = 3,  PowerBonus = 0.12, Pets = { "Cutlass Cat", "Cannon Frog", "Map Owl" } },
-	{ Id = "Epique",     Name = "Epic",      Color = Color3.fromRGB(170, 70, 255),  CoinsPerSecond = 8,  PowerBonus = 0.25, Pets = { "Storm Shark", "Sea Witch Octopus" } },
-	{ Id = "Legendaire", Name = "Legendary", Color = Color3.fromRGB(255, 190, 30),  CoinsPerSecond = 20, PowerBonus = 0.50, Pets = { "Iron-Jaw Walrus", "Kraken Tamer Turtle" } },
-	{ Id = "Mythique",   Name = "Mythic",    Color = Color3.fromRGB(255, 60, 90),   CoinsPerSecond = 50, PowerBonus = 1.00, Pets = { "Sky Whale King" } },
+	{ Id = "Commune",    Name = "Common",    Color = Color3.fromRGB(170, 170, 170), CoinBonus = 0.10, PowerBonus = 0.05, Pets = { "Deckhand Otter", "Crab Cook", "Parrot Lookout" } },
+	{ Id = "Rare",       Name = "Rare",      Color = Color3.fromRGB(60, 140, 255),  CoinBonus = 0.25, PowerBonus = 0.12, Pets = { "Cutlass Cat", "Cannon Frog", "Map Owl" } },
+	{ Id = "Epique",     Name = "Epic",      Color = Color3.fromRGB(170, 70, 255),  CoinBonus = 0.50, PowerBonus = 0.25, Pets = { "Storm Shark", "Sea Witch Octopus" } },
+	{ Id = "Legendaire", Name = "Legendary", Color = Color3.fromRGB(255, 190, 30),  CoinBonus = 1.00, PowerBonus = 0.50, Pets = { "Iron-Jaw Walrus", "Kraken Tamer Turtle" } },
+	{ Id = "Mythique",   Name = "Mythic",    Color = Color3.fromRGB(255, 60, 90),   CoinBonus = 2.00, PowerBonus = 1.00, Pets = { "Sky Whale King" } },
 }
 
 -- Les anciens pets (avant le thème pirate) deviennent un pet pirate de la même rareté,
@@ -285,7 +285,7 @@ function Config.ToTrackDistance(displayDistance, dimensionId)
 	return t * Config.TrackLength
 end
 
--- Les pièces : seuls les pets ÉQUIPÉS rapportent des pièces chaque seconde (CoinsPerSecond de leur rareté).
+-- Les pièces : on les gagne en lançant ; les pets ÉQUIPÉS (CoinBonus) et le trait 💰 Coins multiplient ces pièces.
 
 -- Fonctions utiles (utilisées par le serveur et le client) --------------------
 
@@ -426,6 +426,7 @@ function Config.GetBonuses(equippedKeys)
 		local pet = Config.GetPet(petName)
 		if pet then
 			bonuses.Strength += Config.GetRarity(pet.Rarity).PowerBonus
+			bonuses.Coins += Config.GetRarity(pet.Rarity).CoinBonus or 0 -- le multiplicateur de pièces du pet
 			if trait and bonuses[trait] then
 				bonuses[trait] += Config.TraitValue(trait, tier)
 			end

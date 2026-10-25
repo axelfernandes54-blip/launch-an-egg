@@ -43,16 +43,10 @@ local function getForce(data)
 	return (Config.BaseForce + data.Strength) * getMultiplier(data)
 end
 
--- Seuls les pets ÉQUIPÉS rapportent des pièces ; le trait "Coins" des pets équipés multiplie le total.
-local function getCoinsPerSecond(data)
-	local total = 0
-	for _, key in data.Equipped do
-		local pet = Config.GetPet((Config.ParseKey(key)))
-		if pet then
-			total += Config.GetRarity(pet.Rarity).CoinsPerSecond
-		end
-	end
-	return total * getBonuses(data).Coins
+-- Le multiplicateur de pièces des lancers : les pets ÉQUIPÉS (leur rareté), le trait "Coins" et l'upgrade Coin Bonus.
+-- (les pets ne donnent plus de pièces chaque seconde)
+local function getCoinMultiplier(data)
+	return getBonuses(data).Coins
 end
 
 -- Chaque pet a un trait : on le repère avec sa clé "Nom|Trait|Niveau" (voir PetConfig)
@@ -133,7 +127,7 @@ local function sendState(player)
 
 	StateChanged:FireClient(player, {
 		Coins = math.floor(data.Coins),
-		CoinsPerSecond = getCoinsPerSecond(data),
+		CoinMultiplier = getCoinMultiplier(data), -- le multiplicateur de pièces des lancers
 		Multiplier = getMultiplier(data),
 		Strength = data.Strength,
 		BaseForce = Config.BaseForce + data.Strength,
@@ -439,6 +433,6 @@ end)
 
 return {
 	playerData = playerData, sendState = sendState, petKey = petKey,
-	getBonuses = getBonuses, getMultiplier = getMultiplier, getForce = getForce, getCoinsPerSecond = getCoinsPerSecond,
+	getBonuses = getBonuses, getMultiplier = getMultiplier, getForce = getForce, getCoinMultiplier = getCoinMultiplier,
 	countOwned = countOwned, countEquipped = countEquipped, equipBest = equipBest,
 }

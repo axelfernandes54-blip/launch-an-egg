@@ -557,7 +557,7 @@ local function traitBox(parent, y)
 			title.Text = "No trait yet"
 			title.TextColor3 = Theme.SubText
 			stroke.Color = Color3.fromRGB(70, 90, 150)
-			text.Text = "Visit the Trait Master!"
+			text.Text = ""
 		end
 	end
 	return api
@@ -709,7 +709,7 @@ do
 		local equipped = equippedCount(key)
 		nameText.Text = petName
 		ownedText.Text = string.format("Owned: x%d   •   Equipped: %d", owned, equipped)
-		statsText.Text = string.format("💪 <font color=\"#%s\">%s Strength</font>   💰 +%d/s", hexColor(Theme.Gold), formatMultiplier(1 + rarity.PowerBonus), rarity.CoinsPerSecond)
+		statsText.Text = string.format("💪 <font color=\"#%s\">%s Strength</font>   💰 %s Coins", hexColor(Theme.Gold), formatMultiplier(1 + rarity.PowerBonus), formatMultiplier(1 + rarity.CoinBonus))
 		trait.Show(traitId, tier)
 		local slotsFull = #(UI.state.Equipped or {}) >= (UI.state.MaxEquipped or 3)
 		equipButton.SetStyle((equipped < owned and not slotsFull) and "Green" or "Grey")
@@ -786,7 +786,7 @@ do
 	local hint = label(content, {
 		Position = UDim2.new(0, 205, 0, 4),
 		Size = UDim2.new(1, -205, 0, 34),
-		Text = "Pick a pet, then give it a random trait! Collect dumbbells to earn 💎.",
+		Text = "",
 		TextColor3 = Theme.SubText,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	}, 1.5)

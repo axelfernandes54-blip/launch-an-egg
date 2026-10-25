@@ -161,7 +161,7 @@ StateChanged.OnClientEvent:Connect(function(newState)
 	rerollsValue.Text = formatNumber(UI.state.Diamonds or 0)
 	-- le portail au bout de la barre brille quand le World 2 est acheté (la barre suit la dimension : voir Hud)
 	showWorld2((UI.state.UnlockedWorlds or {})[2] == true)
-	coinRate.Text = "+" .. formatNumber(UI.state.CoinsPerSecond or 0) .. "/s"
+	coinRate.Text = formatMultiplier(UI.state.CoinMultiplier or 1) -- le multiplicateur de pièces des lancers (pets, trait, upgrade)
 
 	-- Le compteur de Force grossit un instant quand il augmente
 	UI.currentForce = UI.state.Force
