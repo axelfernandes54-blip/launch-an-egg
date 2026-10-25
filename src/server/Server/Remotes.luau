@@ -40,11 +40,12 @@ local DuoInvited = makeRemote("DuoInvited")     -- serveur -> client : "ce joueu
 local DuoUpdate = makeRemote("DuoUpdate")       -- serveur -> client : ton duo (partenaire, prêt ?) ou nil
 local OpenWorlds = makeRemote("OpenWorlds")     -- serveur -> client : "ouvre la fenêtre des worlds"
 local ChooseWorld = makeRemote("ChooseWorld")   -- client -> serveur : "j'achète / je vais dans ce world" (en pièces)
+local ClaimIndex = makeRemote("ClaimIndex")     -- client -> serveur : "je réclame la récompense de cette ligne de l'Index"
 return {
 	LaunchEgg = LaunchEgg, BuyUpgrade = BuyUpgrade, EggLaunched = EggLaunched, EggLanded = EggLanded,
 	StateChanged = StateChanged, DumbbellCollected = DumbbellCollected, EquipPet = EquipPet, EquipBest = EquipBest,
 	RerollTrait = RerollTrait, TraitRerolled = TraitRerolled, OpenTraits = OpenTraits, SetUIScale = SetUIScale,
 	World2Unlocked = World2Unlocked, ShowMessage = ShowMessage, UsePotion = UsePotion, OpenCodes = OpenCodes,
 	RedeemCode = RedeemCode, DuoInvite = DuoInvite, DuoRespond = DuoRespond, DuoLeave = DuoLeave,
-	DuoInvited = DuoInvited, DuoUpdate = DuoUpdate, OpenWorlds = OpenWorlds, ChooseWorld = ChooseWorld,
+	DuoInvited = DuoInvited, DuoUpdate = DuoUpdate, OpenWorlds = OpenWorlds, ChooseWorld = ChooseWorld, ClaimIndex = ClaimIndex,
 }

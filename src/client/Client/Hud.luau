@@ -21,7 +21,7 @@ local clearChildren, badge, bonusChip, equippedCount, petsSignature = UI.clearCh
 
 local buyX2, formatTime, openInventoryCategory = UI.Windows.buyX2, UI.Windows.formatTime, UI.Windows.openInventoryCategory
 
--- À gauche : les tuiles Quests, Claim!, Daily Login, Collection -------------------
+-- À gauche : les tuiles Quests, Claim!, Daily Login, Index -------------------
 
 -- Une tuile carrée : un rond de couleur avec un emoji, et son nom en dessous
 local function makeTile(parent, emoji, text, color, props, onClick)
@@ -84,8 +84,8 @@ local TILE_SIZE = UDim2.new(0, 88, 0, 88)
 makeTile(leftColumn, "🏆", "Quests", ButtonStyles.Gold[2], { Size = TILE_SIZE }, comingSoon)
 makeTile(leftColumn, "🎁", "Claim!", ButtonStyles.Green[2], { Size = TILE_SIZE, Position = UDim2.new(0, 0, 0, 110) }, comingSoon)
 makeTile(leftColumn, "📅", "Daily Login", ButtonStyles.Blue[2], { Size = TILE_SIZE, Position = UDim2.new(0, 0, 0, 220) }, comingSoon)
-makeTile(leftColumn, "📖", "Collection", ButtonStyles.Purple[2], { Size = TILE_SIZE, Position = UDim2.new(0, 0, 0, 330) }, function()
-	openWindow("Collection")
+makeTile(leftColumn, "📖", "Index", ButtonStyles.Purple[2], { Size = TILE_SIZE, Position = UDim2.new(0, 0, 0, 330) }, function()
+	openWindow("Index")
 end)
 
 -- À droite : les compteurs, le Shop et les boutons --------------------------------

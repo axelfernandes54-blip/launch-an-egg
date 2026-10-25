@@ -1,6 +1,6 @@
 -- Windows (ModuleScript dans StarterPlayer > StarterPlayerScripts > Client)
 -- Les fenêtres : Shop (Robux), Upgrades (diamants), Worlds (pièces), Inventory (onglets PETS / POTIONS...), Codes,
--- Trait Master, Collection, Leaderboard et Settings.
+-- Trait Master, Index (album des pets), Leaderboard et Settings.
 
 local UI = require(script.Parent.UI)
 local Players, ReplicatedStorage, RunService, TweenService, UserInputService = UI.Players, UI.ReplicatedStorage, UI.RunService, UI.TweenService, UI.UserInputService
@@ -874,24 +874,19 @@ do
 	end
 end
 
--- COLLECTION : tous les pets du monde, les secrets restent dans l'ombre --------------
+-- INDEX : une ligne par rareté (comme un album). Les pets pas encore trouvés sont des ombres "??".
+-- Quand toute la ligne est trouvée : bouton "Claim" -> +5 % de Force pour toujours (Config.IndexReward).
 
 do
-	local collection = makeWindow("Collection", "COLLECTION", "📖", 780, 560)
-	local content = collection.Content
+	local index = makeWindow("Index", "PET INDEX", "📖", 960, 620)
+	local content = index.Content
+	local ClaimIndex = remotes:WaitForChild("ClaimIndex")
 	local lastSignature = nil
+	local ROW_HEIGHT, TILE = 150, 104
+	local rewardText = "+" .. math.round(Config.IndexReward.StrengthPerRow * 100) .. "%"
 
-	local progressBack = make("Frame", { Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = Theme.PanelDark }, content)
-	round(progressBack, 20)
-	border(progressBack, 3)
-	local progressFill = make("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, progressBack)
-	round(progressFill, 20)
-	gradient(progressFill, ButtonStyles.Gold[1], ButtonStyles.Gold[2])
-	local progressText = label(progressBack, { Size = UDim2.new(1, -20, 0.7, 0), Position = UDim2.new(0, 10, 0.15, 0), Text = "", Font = TITLE_FONT }, 2.5)
-
-	local grid = make("ScrollingFrame", {
-		Position = UDim2.new(0, 0, 0, 52),
-		Size = UDim2.new(1, 0, 1, -52),
+	local list = make("ScrollingFrame", {
+		Size = UDim2.new(1, 0, 1, -56),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ScrollBarThickness = 8,
@@ -899,52 +894,112 @@ do
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		CanvasSize = UDim2.new(),
 	}, content)
-	make("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingTop = UDim.new(0, 6), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8) }, grid)
-	make("UIGridLayout", { CellSize = UDim2.new(0, 128, 0, 160), CellPadding = UDim2.new(0, 12, 0, 12), SortOrder = Enum.SortOrder.LayoutOrder }, grid)
+	make("UIListLayout", { Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder }, list)
+	make("UIPadding", { PaddingRight = UDim.new(0, 12), PaddingTop = UDim.new(0, 4) }, list)
 
-	collection.Refresh = function(force)
+	-- en bas : le bonus total et le nombre de pets trouvés
+	local footer = make("Frame", {
+		AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 0, 1, 0),
+		Size = UDim2.new(1, 0, 0, 46),
+		BackgroundColor3 = Theme.PanelDark,
+	}, content)
+	round(footer, 16)
+	border(footer, 3, Theme.Gold)
+	local boostText = label(footer, { Position = UDim2.new(0, 18, 0.15, 0), Size = UDim2.new(0.5, -18, 0.7, 0), Text = "", TextXAlignment = Enum.TextXAlignment.Left, Font = TITLE_FONT }, 2)
+	local countText = label(footer, { Position = UDim2.new(0.5, 0, 0.15, 0), Size = UDim2.new(0.5, -18, 0.7, 0), Text = "", TextXAlignment = Enum.TextXAlignment.Right, Font = TITLE_FONT }, 2)
+
+	-- la chance (en %) d'avoir ce pet en lançant à son record
+	local function petChance(rarity)
+		local best = UI.state and UI.state.Best or 0
+		local dimension = Config.DimensionForDistance(best).Id
+		local chances = Config.GetChances(Config.ToTrackDistance(best, dimension), 1)
+		return (chances[rarity.Id] or 0) / #rarity.Pets
+	end
+
+	local function percentText(value)
+		if value >= 10 then
+			return math.round(value) .. "%"
+		elseif value >= 1 then
+			return string.format("%.1f%%", value)
+		end
+		return string.format("%.2f%%", value)
+	end
+
+	-- une case de pet : le pet en 3D (ou son ombre), la chance en haut, combien on en a en bas
+	local function petTile(parent, petName, rarity, owned, count, position)
+		local tile = make("Frame", { Position = position, Size = UDim2.new(0, TILE, 0, TILE), BackgroundColor3 = owned and rarity.Color:Lerp(Color3.new(1, 1, 1), 0.35) or Theme.Panel }, parent)
+		round(tile, 14)
+		local stroke = border(tile, 3)
+		if owned then
+			rarityStroke(stroke, rarity)
+		end
+		petViewport(tile, petName, { Position = UDim2.new(0, 6, 0, 14), Size = UDim2.new(1, -12, 1, -30) }, { Locked = not owned, Mode = owned and "sway" or "still" })
+		label(tile, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 2), Size = UDim2.new(1, -8, 0, 22), Text = owned and percentText(petChance(rarity)) or "??", Font = TITLE_FONT, ZIndex = 3 }, 2)
+		label(tile, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -2), Size = UDim2.new(1, -8, 0, 22), Text = owned and ("x" .. count) or "", TextColor3 = Theme.Gold, Font = TITLE_FONT, ZIndex = 3 }, 2)
+		return tile
+	end
+
+	index.Refresh = function(force)
 		local signature = petsSignature()
+		for rarityId in (UI.state and UI.state.IndexClaimed) or {} do
+			signature ..= "|" .. rarityId
+		end
 		if not force and signature == lastSignature then
 			return
 		end
 		lastSignature = signature
-		clearChildren(grid)
-		local found, total, order = 0, 0, 0
-		for _, rarity in Config.Rarities do
-			for _, petName in rarity.Pets do
+		clearChildren(list)
+		local found, total, claimed = 0, 0, 0
+		for order, rarity in Config.Rarities do
+			local row = make("Frame", { Size = UDim2.new(1, 0, 0, ROW_HEIGHT), BackgroundTransparency = 1, LayoutOrder = order }, list)
+			-- à gauche : la ligne des pets de cette rareté
+			local panel = make("Frame", { Size = UDim2.new(1, -250, 1, 0), BackgroundColor3 = rarity.Color:Lerp(Theme.PanelDark, 0.55) }, row)
+			round(panel, 16)
+			border(panel, 3)
+			label(panel, { Position = UDim2.new(0, 14, 0, 6), Size = UDim2.new(0.6, 0, 0, 26), Text = "WORLD 1 - " .. string.upper(rarity.Name) .. " PETS", TextXAlignment = Enum.TextXAlignment.Left, Font = TITLE_FONT }, 2)
+			label(panel, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 6), Size = UDim2.new(0.38, 0, 0, 26), Text = "UNLOCK ALL PETS", TextXAlignment = Enum.TextXAlignment.Right, Font = TITLE_FONT }, 2)
+			local allFound = true
+			for i, petName in rarity.Pets do
 				total += 1
-				order += 1
-				local owned = UI.state and UI.state.NameCounts and (UI.state.NameCounts[petName] or 0) > 0
-				if owned then
+				local count = UI.state and UI.state.NameCounts and UI.state.NameCounts[petName] or 0
+				if count > 0 then
 					found += 1
+				else
+					allFound = false
 				end
-				local card = make("Frame", { BackgroundColor3 = owned and Theme.PanelLight or Theme.Panel, LayoutOrder = order }, grid)
-				round(card, 16)
-				local stroke = border(card, 3, Color3.fromRGB(70, 90, 150))
-				if owned then
-					rarityStroke(stroke, rarity)
-					local halo = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = rarity.Color, BorderSizePixel = 0 }, card)
-					round(halo, 16)
-					make("UIGradient", { Rotation = 90, Transparency = NumberSequence.new(0.9, 0.35) }, halo)
-				end
-				petViewport(card, petName, { Position = UDim2.new(0, 8, 0, 8), Size = UDim2.new(1, -16, 1, -60) }, { Locked = not owned, Mode = owned and "sway" or "still" })
-				label(card, {
-					AnchorPoint = Vector2.new(0.5, 1),
-					Position = UDim2.new(0.5, 0, 1, -26),
-					Size = UDim2.new(1, -12, 0, 24),
-					Text = owned and petName or "???",
-				}, 2)
-				label(card, {
-					AnchorPoint = Vector2.new(0.5, 1),
-					Position = UDim2.new(0.5, 0, 1, -6),
-					Size = UDim2.new(1, -12, 0, 18),
-					Text = owned and ("💪 " .. formatMultiplier(1 + rarity.PowerBonus) .. " Strength") or ("🔒 " .. rarity.Name),
-					TextColor3 = owned and Theme.Gold or rarity.Color,
-				}, 1.5)
+				petTile(panel, petName, rarity, count > 0, count, UDim2.new(0, 14 + (i - 1) * (TILE + 12), 0, 38))
 			end
+			local isClaimed = UI.state and UI.state.IndexClaimed and UI.state.IndexClaimed[rarity.Id]
+			if isClaimed then
+				claimed += 1
+			elseif allFound then
+				local claim = fancyButton(panel, "Green", "Claim", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.new(0.5, 0, 0.58, 0),
+					Size = UDim2.new(0, 220, 0, 56),
+					ZIndex = 5,
+				})
+				claim.Button.Activated:Connect(function()
+					ClaimIndex:FireServer(rarity.Id)
+				end)
+			end
+			-- à droite : la récompense (le pet le plus rare de la ligne + le bonus)
+			local reward = make("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0, 238, 1, 0), BackgroundColor3 = Theme.PanelDark }, row)
+			round(reward, 16)
+			border(reward, 3, isClaimed and Theme.Gold or nil)
+			label(reward, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.new(1, -12, 0, 26), Text = isClaimed and "✔ CLAIMED" or "REWARD", TextColor3 = isClaimed and Theme.Gold or Theme.Text, Font = TITLE_FONT }, 2)
+			local rarest = rarity.Pets[#rarity.Pets]
+			local rarestCount = UI.state and UI.state.NameCounts and UI.state.NameCounts[rarest] or 0
+			petTile(reward, rarest, rarity, rarestCount > 0, rarestCount, UDim2.new(0, 12, 0, 38))
+			local badge = make("Frame", { Position = UDim2.new(0, 128, 0, 46), Size = UDim2.new(0, 96, 0, 88), BackgroundColor3 = Theme.Panel }, reward)
+			round(badge, 44)
+			border(badge, 3, Theme.Gold)
+			icon(badge, "💪", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.new(0, 34, 0, 34) })
+			label(badge, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -10, 0, 34), Text = rewardText, Font = TITLE_FONT }, 2.5)
 		end
-		progressText.Text = string.format("COLLECTED %d / %d", found, total)
-		TweenService:Create(progressFill, TweenInfo.new(0.5, Enum.EasingStyle.Quad), { Size = UDim2.fromScale(math.max(found / total, 0.04), 1) }):Play()
+		boostText.Text = string.format("💪 Total Index Boost: +%d%%", math.round(claimed * Config.IndexReward.StrengthPerRow * 100))
+		countText.Text = string.format("Collected: %d/%d", found, total)
 	end
 end
 

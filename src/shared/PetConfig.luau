@@ -78,6 +78,10 @@ Config.Worlds = {
 	{ Id = 2, Name = "WORLD 2", Theme = "Coming soon", Cost = 1000000 },
 }
 
+-- L'INDEX des pets (bouton 📖 Index) : une ligne par rareté. Quand on a trouvé tous les pets d'une ligne,
+-- on clique "Claim" et on gagne pour toujours StrengthPerRow de Force en plus (0.05 = +5 %).
+Config.IndexReward = { StrengthPerRow = 0.05 }
+
 -- Les pièces 💰 gagnées à chaque lancer : la distance affichée x LaunchCoinsPerStud (x le bonus de pièces)
 Config.LaunchCoinsPerStud = 0.1
 

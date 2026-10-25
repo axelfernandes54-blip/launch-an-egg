@@ -1,7 +1,7 @@
 -- ClientMain (LocalScript dans StarterPlayer > StarterPlayerScripts)
 -- Le point de départ de l'interface et des effets côté joueur : il charge chaque partie (dossier Client).
 --   UI           : le style et les petites fonctions de l'interface, les fenêtres
---   Windows      : Shop, Upgrades, Inventory (PETS / POTIONS), Codes, Trait Master, Collection, Leaderboard, Settings
+--   Windows      : Shop, Upgrades, Worlds, Inventory (PETS / POTIONS), Codes, Trait Master, Index, Leaderboard, Settings
 --   Hud          : tuiles, compteurs, barre des zones, Force, minuteur de potion
 --   Launch       : jauge, tir, caméra qui suit l'œuf, carte "YOU GOT..."
 --   Duo          : coup de pied à deux (bouton DUO, invitation, bandeau)

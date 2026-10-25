@@ -30,6 +30,12 @@ local function getBonuses(data)
 	bonuses.Luck += Config.UpgradeBonus("Luck", levels.Luck)
 	bonuses.Coins += Config.UpgradeBonus("Coins", levels.Coins)
 	bonuses.Dumbbell += Config.UpgradeBonus("Lifting", levels.Lifting)
+	-- l'Index : chaque ligne de pets complétée et réclamée donne de la Force en plus
+	local claimed = 0
+	for _ in data.IndexClaimed or {} do
+		claimed += 1
+	end
+	bonuses.Strength += claimed * Config.IndexReward.StrengthPerRow
 	return bonuses
 end
 
@@ -139,6 +145,7 @@ local function sendState(player)
 		RarityCounts = rarityCounts,
 		PetCounts = petCounts,
 		NameCounts = nameCounts,
+		IndexClaimed = data.IndexClaimed, -- [rareté] = true : les lignes de l'Index déjà réclamées
 		Diamonds = data.Diamonds,
 		UIScale = data.UIScale,
 		Dimension = Config.DimensionForDistance(data.Best).Id, -- la dimension de son record (pour la barre du haut)
@@ -257,6 +264,13 @@ local function loadProgress(player, data)
 			end
 		end
 		data.DuoKicks = math.max(0, math.floor(tonumber(saved.DuoKicks) or 0))
+		if type(saved.IndexClaimed) == "table" then
+			for _, rarityId in saved.IndexClaimed do
+				if type(rarityId) == "string" then
+					data.IndexClaimed[rarityId] = true
+				end
+			end
+		end
 		data.Pets = unpackPets(saved.Pets)
 		-- les potions (les vieilles sauvegardes n'en ont pas : 0)
 		local potions = type(saved.Potions) == "table" and saved.Potions or {}
@@ -290,6 +304,10 @@ local function saveProgress(player, data)
 	for code in data.Codes do
 		table.insert(usedCodes, code)
 	end
+	local indexClaimed = {}
+	for rarityId in data.IndexClaimed do
+		table.insert(indexClaimed, rarityId)
+	end
 	local unlocked = {}
 	for id in data.UnlockedWorlds do
 		table.insert(unlocked, id)
@@ -306,6 +324,7 @@ local function saveProgress(player, data)
 		UIScale = data.UIScale,
 		UnlockedWorlds = unlocked, -- les worlds achetés (liste d'Id)
 		DuoKicks = data.DuoKicks,
+		IndexClaimed = indexClaimed, -- les lignes de l'Index réclamées (liste de raretés)
 		Potions = data.Potions,
 		BoostTime = math.floor(data.BoostTime),
 		Codes = usedCodes, -- les codes déjà utilisés
@@ -344,6 +363,7 @@ Players.PlayerAdded:Connect(function(player)
 		UIScale = 1, -- la taille de l'interface choisie dans Settings (0.7 à 1.3)
 		UnlockedWorlds = { [1] = true }, -- les worlds achetés avec des pièces au portail du lobby
 		DuoKicks = 0, -- nombre de coups de pied à deux réussis
+		IndexClaimed = {}, -- [rareté] = true : lignes de l'Index réclamées
 		Best = 0,
 		Strength = 0, -- points de Force gagnés avec les haltères (on les garde)
 		Potions = { Potion5 = 0, Potion10 = 0, Potion20 = 0 }, -- les potions qu'on a (pas encore bues)
